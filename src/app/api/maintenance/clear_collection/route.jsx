@@ -13,7 +13,7 @@ import MidcapNiftyMarketPrice from '@/models/Midcap_Nifty_50_Market_Price';
 // Connect to DB
 connectToMongo();
 
-export async function POST() {
+export async function GET() {
   try {
     const collections = [
       { model: NiftyOptionChainData, name: 'Nifty_50_Option_Chain_Data' },
