@@ -13,7 +13,6 @@
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
-    "cron": "^3.5.0",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.5.47",
     "mongoose": "^8.10.0",
