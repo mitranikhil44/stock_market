@@ -1,0 +1,9 @@
+{
+    "crons": [
+      {
+        "path": "/api/fetching_data",
+        "schedule": "*/5 * * * *"
+      }
+    ]
+  }
+  
