@@ -9,10 +9,10 @@ export const isIndianMarketOpen = () => {
 
   const currentTime = hours * 60 + minutes;
   const marketOpenTime = 9 * 60 + 15; // 09:15 AM
-  const marketCloseTime = 3 * 60 + 30; // 03:30 PM
+  const marketCloseTime = 15 * 60 + 30; // 03:30 PM
 
   // Market is closed on Saturdays (Sat) and Sundays (Sun)
-  if (day === 'Sat' || day === 'Su') {
+  if (day === 'Sat'|| day === 'Su' ) {
     return false;
   }
 
