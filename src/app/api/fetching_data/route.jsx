@@ -24,12 +24,8 @@ const fetchIndexData = async (index) => {
   }
 };
 
-export async function POST(req) {
+export async function GET(req) {
   await connectToMongo();
-
-  // 🔹 Check if the user is an admin
-  const authError = await verifyAdminUser(req);
-  if (authError) return authError; // Return error response if unauthorized
 
   if (!isIndianMarketOpen()) {
     console.log("⏸️ Market is closed. Skipping data fetching.");
