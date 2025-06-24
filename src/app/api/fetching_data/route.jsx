@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
 import { isIndianMarketOpen } from "@/components/functions/check_marketing_hour";
-import { verifyAdminUser } from "@/middleware/Verify_Admin_Token";
 import { connectToMongo } from "@/lib/mongodb";
 
 const INDICES = [

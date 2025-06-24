@@ -9,6 +9,7 @@ if (!MONGODB_URI) {
 let cached = global.mongoose || { conn: null, promise: null };
 
 export async function connectToMongo() {
+   if (mongoose.connection.readyState === 1) return;
   if (cached.conn) {
     console.log("✅ MongoDB already connected!");
     return cached.conn;
