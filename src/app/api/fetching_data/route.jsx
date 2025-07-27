@@ -1,38 +1,46 @@
 import { NextResponse } from "next/server";
-import axios from "axios";
 import { isIndianMarketOpen } from "@/components/functions/check_marketing_hour";
 import { connectToMongo } from "@/lib/mongodb";
 
-const INDICES = [
-  "nifty_50",
-  "nifty_bank",
-  "nifty_financial",
-  "nifty_midcap_50",
-];
+// Import sub-API POST functions directly
+import { POST as fetchNifty50 } from "@/app/api/fetching_data/nifty_50/route";
+import { POST as fetchNiftyBank } from "@/app/api/fetching_data/nifty_bank/route";
+import { POST as fetchFinNifty } from "@/app/api/fetching_data/fin_nifty/route";
+import { POST as fetchMidcapNifty } from "@/app/api/fetching_data/nifty_midcap_50/route";
 
-const fetchIndexData = async (index) => {
+// Prevent edge runtime for better DB support
+export const runtime = 'nodejs';
+
+export async function GET() {
   try {
-    const response = await axios.post(
-      `${process.env.BASE_URL}/api/fetching_data/${index}`
-    );
-    console.log(`✅ Successfully fetched ${index} data`);
-    return response.data;
+    await connectToMongo();
+
+    if (!isIndianMarketOpen()) {
+      console.log("⏸️ Market is closed. Skipping data fetching.");
+      return NextResponse.json({
+        success: false,
+        message: "Market is closed",
+      });
+    }
+
+    console.log("📌 Market is open. Fetching data...");
+
+    const responses = await Promise.all([
+      fetchNifty50(),
+      fetchNiftyBank(),
+      fetchFinNifty(),
+      fetchMidcapNifty(),
+    ]);
+
+    const results = await Promise.all(responses.map((res) => res.json()));
+
+    return NextResponse.json({
+      success: true,
+      message: "Data updated",
+      results,
+    });
   } catch (error) {
-    console.error(`❌ Error fetching ${index} data:`, error.message);
-    return null;
+    console.error("❌ Error in fetching_data route:", error.message);
+    return NextResponse.json({ success: false, error: error.message });
   }
-};
-
-export async function GET(req) {
-  await connectToMongo();
-
-  if (!isIndianMarketOpen()) {
-    console.log("⏸️ Market is closed. Skipping data fetching.");
-    return NextResponse.json({ success: false, message: "Market is closed" });
-  }
-
-  console.log("📌 Market is open. Fetching data...");
-  const results = await Promise.all(INDICES.map(fetchIndexData));
-
-  return NextResponse.json({ success: true, message: "Data updated", results });
 }
