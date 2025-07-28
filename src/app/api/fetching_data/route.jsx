@@ -8,7 +8,7 @@ import { POST as fetchNiftyBank } from "@/app/api/fetching_data/nifty_bank/route
 import { POST as fetchFinNifty } from "@/app/api/fetching_data/fin_nifty/route";
 import { POST as fetchMidcapNifty } from "@/app/api/fetching_data/nifty_midcap_50/route";
 
-// Prevent edge runtime for better DB support
+// Prevent edge runtime for better DB supportF
 export const runtime = 'nodejs';
 
 export async function GET() {

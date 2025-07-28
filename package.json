@@ -14,11 +14,14 @@
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.532.0",
     "moment-timezone": "^0.5.47",
     "mongoose": "^8.10.0",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-icons": "^5.5.0",
+    "react-toastify": "^11.0.5",
     "recharts": "^2.15.3"
   },
   "devDependencies": {
