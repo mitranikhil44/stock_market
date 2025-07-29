@@ -8,8 +8,9 @@ export const isIndianMarketOpen = () => {
   const day = now.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short' });
 
   const currentTime = hours * 60 + minutes;
-  const marketOpenTime = 9 * 60 + 15; // 09:15 AM
-  const marketCloseTime = 15 * 60 + 0; // 03:30 PM
+const marketOpenTime  = 0 * 60 + 10;
+const marketCloseTime = 15 * 60 + 30;
+
 
   // Market is closed on Saturdays (Sat) and Sundays (Sun)
   if (day === 'Sat'|| day === 'Sun' ) {

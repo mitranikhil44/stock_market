@@ -4,55 +4,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------- Color Variables (Light default) ------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b1220;           /* deep navy gradient base */
+  --background-muted: #0a0f1a;     /* slightly darker */
+  --foreground: #e6eefc;           /* near-white text */
+  --accent-1: 56, 189, 248;        /* sky-400 */
+  --accent-2: 167, 139, 250;       /* violet-400 */
+  --grid: 255, 255, 255;           /* grid color base (white) */
+  --grid-alpha: 0.06;              /* subtle grid opacity */
 }
 
+/* Prefer system dark (also add .dark class if you want manual control) */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #070b14;
+    --background-muted: #050811;
+    --foreground: #e6eefc;
+    --grid-alpha: 0.08;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* If Tailwind dark mode is 'class', you can also override via .dark */
+.dark {
+  --background: #070b14;
+  --background-muted: #050811;
+  --foreground: #e6eefc;
+  --grid-alpha: 0.08;
 }
 
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
+/* ------------- Base ------------- */
 @layer base {
+  html, body, #__next { height: 100%; }
   body {
-    font-family: "Inter", sans-serif;
+    color: var(--foreground);
+    font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+    background: linear-gradient(180deg, var(--background) 0%, var(--background-muted) 100%);
   }
 }
 
+/* ------------- Utilities ------------- */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}
+
+/* ------------- Components ------------- */
+/* 1) Subtle grid overlay */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(var(--grid), var(--grid-alpha)) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(var(--grid), var(--grid-alpha)) 1px,
+      transparent 1px
+    );
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 65%);
+  z-index: 0;
+}
+
+/* 2) Radial spotlight blobs (accent glows) */
+.bg-spotlights {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 400px at 85% -10%, rgba(var(--accent-1), 0.18), transparent 60%),
+    radial-gradient(700px 320px at -10% 15%, rgba(var(--accent-2), 0.18), transparent 60%);
+  filter: blur(0.2px); /* prevent banding */
+  z-index: 0;
+}
+
+/* 3) Very subtle film grain / noise (base64 inline, GPU-friendly) */
+.bg-noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0.5 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  z-index: 0;
+}
+
+/* 4) Optional glass card helper for content blocks */
+.glass-card {
+  @apply rounded-2xl border border-white/10 shadow-lg;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.06) 0%,
+    rgba(255,255,255,0.03) 100%
+  );
+  backdrop-filter: blur(8px);
+}
+
+/* Keep your existing component helpers */
 @layer components {
-  input[type="checkbox"]:checked ~ label span svg {
-    @apply inline-flex;
-  }
-
-  .sticky .header-logo {
-    @apply py-5 lg:py-2;
-  }
-
-  .sticky .menu-scroll.active {
-    @apply opacity-70;
-  }
-
-  input#togglePlan:checked ~ .dot {
-    @apply translate-x-full;
-  }
-
-  input#checkboxLabel:checked ~ .box span {
-    @apply opacity-100;
-  }
+  input[type="checkbox"]:checked ~ label span svg { @apply inline-flex; }
+  .sticky .header-logo { @apply py-5 lg:py-2; }
+  .sticky .menu-scroll.active { @apply opacity-70; }
+  input#togglePlan:checked ~ .dot { @apply translate-x-full; }
+  input#checkboxLabel:checked ~ .box span { @apply opacity-100; }
 }
