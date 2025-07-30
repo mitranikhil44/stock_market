@@ -1,37 +1,23 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { parseNum, delta } from '@/utils/optionChain';
+import Link from 'next/link';
 
-// Simple tooltip cell wrapper
-function HoverDelta({ label, cur, prev }) {
-  const d = delta(cur, prev);
-  const sign = d == null ? '' : d > 0 ? '+' : '';
-  const color = d == null ? 'text-gray-300' : d > 0 ? 'text-green-400' : d < 0 ? 'text-red-400' : 'text-gray-300';
-
-  return (
-    <div className="relative group">
-      <span className="whitespace-nowrap">{cur == null ? '-' : cur.toLocaleString('en-IN')}</span>
-      {/* Tooltip */}
-      <div className="invisible group-hover:visible absolute z-30 -top-2 left-1/2 -translate-x-1/2 -translate-y-full
-                      min-w-[160px] rounded-md bg-gray-900 text-white text-xs p-2 shadow-lg border border-white/10">
-        <div className="font-semibold mb-1">{label}</div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-300">Prev:</span>
-          <span>{prev == null ? '-' : prev.toLocaleString('en-IN')}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-300">Δ:</span>
-          <span className={color}>{d == null ? '-' : `${sign}${d.toLocaleString('en-IN')}`}</span>
-        </div>
-      </div>
-    </div>
-  );
+/* Local safe parser so you won’t hit import issues */
+function parseNum(x) {
+  if (x == null) return null;
+  const s = String(x).trim();
+  if (s === '-' || s === '') return null;
+  const cleaned = s.replace(/,/g, '');
+  const m = cleaned.match(/^-?\d+(\.\d+)?/);
+  return m ? Number(m[0]) : null;
+}
+function delta(cur, prev) {
+  if (cur == null || prev == null) return null;
+  return cur - prev;
 }
 
-export default function OptionChainTable({ snapshots }) {
-  // snapshots => [{ timestamp, data: [ {CallOI,...,StrikePrice,...} ]}, ...]
-
+export default function OptionChainTable({ snapshots, symbol, underlyingSpot, showPrevInline = false }) {
   const { latest, prev } = useMemo(() => {
     if (!snapshots?.length) return { latest: null, prev: null };
     return {
@@ -50,6 +36,18 @@ export default function OptionChainTable({ snapshots }) {
     return map;
   }, [prev]);
 
+  const atmStrike = useMemo(() => {
+    if (!latest?.data?.length || !underlyingSpot) return null;
+    let best = null, bestDiff = Infinity;
+    for (const r of latest.data) {
+      const k = Number(r.StrikePrice);
+      if (!Number.isFinite(k)) continue;
+      const d = Math.abs(k - underlyingSpot);
+      if (d < bestDiff) { best = k; bestDiff = d; }
+    }
+    return best;
+  }, [latest, underlyingSpot]);
+
   if (!latest?.data?.length) {
     return <div className="text-center text-sm text-gray-400 py-10">No option chain data.</div>;
   }
@@ -57,14 +55,21 @@ export default function OptionChainTable({ snapshots }) {
   return (
     <div className="w-full overflow-auto rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-3">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base sm:text-lg font-semibold">Bank Nifty Option Chain</h3>
-        <div className="text-xs text-gray-400">As of: {latest.timestamp}</div>
+        <h3 className="text-base sm:text-lg font-semibold">
+          {symbol.replace(/_/g, ' ')} Option Chain
+        </h3>
+        <div className="text-xs text-gray-400 flex gap-3">
+          <span>As of: {latest.timestamp}</span>
+          {underlyingSpot != null && (
+            <span>Spot: <b className="text-sky-300">{underlyingSpot.toLocaleString('en-IN')}</b></span>
+          )}
+        </div>
       </div>
 
-      <table className="min-w-[880px] w-full text-xs sm:text-sm">
+      <table className="min-w-[900px] w-full text-xs sm:text-sm">
         <thead>
           <tr className="text-gray-300 border-b border-white/10">
-            <th className="py-2 pr-2 text-left">Strike</th>
+            <th className="py-2 pr-2 text-left">Strike {atmStrike != null && <span className="text-[10px] text-emerald-400">(ATM: {atmStrike})</span>}</th>
 
             <th className="py-2 px-2 text-right">Call OI</th>
             <th className="py-2 px-2 text-right">Call Vol</th>
@@ -79,10 +84,9 @@ export default function OptionChainTable({ snapshots }) {
         </thead>
         <tbody>
           {latest.data.map((row, idx) => {
-            const k = String(row.StrikePrice);
-            const prevRow = prevByStrike.get(k);
-
-            const strike = row.StrikePrice;
+            const kStr = String(row.StrikePrice);
+            const kNum = Number(row.StrikePrice);
+            const prevRow = prevByStrike.get(kStr);
 
             const cOI  = parseNum(row.CallOI);
             const pCOI = parseNum(prevRow?.CallOI);
@@ -95,40 +99,50 @@ export default function OptionChainTable({ snapshots }) {
 
             const cChgLTP = row.CallChgLTP ?? '-';
 
-            const pLTPv = parseNum(row.PutLTP);
-            const ppLTP = parseNum(prevRow?.PutLTP);
+            const putLTP  = parseNum(row.PutLTP);
+            const pPutLTP = parseNum(prevRow?.PutLTP);
 
             const pChgLTP = row.PutChgLTP ?? '-';
 
-            const pVol  = parseNum(row.PutVol);
-            const ppVol = parseNum(prevRow?.PutVol);
+            const putVol  = parseNum(row.PutVol);
+            const pPutVol = parseNum(prevRow?.PutVol);
 
             const pOI  = parseNum(row.PutOI);
             const ppOI = parseNum(prevRow?.PutOI);
 
-            // zebra + highlight ATM-ish near center
-            const trBg = idx % 2 === 0 ? 'bg-white/[0.02]' : 'bg-transparent';
+            const isATM = atmStrike != null && Number.isFinite(kNum) && kNum === atmStrike;
 
             return (
-              <tr key={idx} className={`${trBg} hover:bg-white/[0.06] transition-colors`}>
-                <td className="py-2 pr-2 font-medium text-blue-200">{strike}</td>
-
-                <td className="py-2 px-2 text-right">
-                  <HoverDelta label="Call OI" cur={cOI} prev={pCOI} />
+              <tr
+                key={idx}
+                className={`transition-colors ${
+                  isATM ? 'bg-emerald-500/10 hover:bg-emerald-500/20' : (idx % 2 === 0 ? 'bg-white/[0.02]' : '')
+                }`}
+              >
+                <td className="py-2 pr-2 font-semibold text-blue-200">
+                  <div className="flex items-center gap-2">
+                    {isATM && <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />}
+                    {kStr}
+                  </div>
                 </td>
-                <td className="py-2 px-2 text-right">
-                  <HoverDelta label="Call Vol" cur={cVol} prev={pCVol} />
+
+                {/* ✅ Clickable cells open detail page */}
+                <td className="py-2 px-2 text-right align-top">
+                  <CellLink symbol={symbol} strike={kStr} metric="call-oi" cur={cOI} prev={pCOI} showPrevInline={showPrevInline} label="Call OI" />
+                </td>
+                <td className="py-2 px-2 text-right align-top">
+                  <CellLink symbol={symbol} strike={kStr} metric="call-vol" cur={cVol} prev={pCVol} showPrevInline={showPrevInline} label="Call Vol" />
                 </td>
                 <td className="py-2 px-2 text-right">{cLTP == null ? '-' : cLTP.toLocaleString('en-IN')}</td>
                 <td className="py-2 px-2 text-right text-gray-300">{cChgLTP}</td>
 
-                <td className="py-2 px-2 text-right">{pLTPv == null ? '-' : pLTPv.toLocaleString('en-IN')}</td>
+                <td className="py-2 px-2 text-right">{putLTP == null ? '-' : putLTP.toLocaleString('en-IN')}</td>
                 <td className="py-2 px-2 text-right text-gray-300">{pChgLTP}</td>
-                <td className="py-2 px-2 text-right">
-                  <HoverDelta label="Put Vol" cur={pVol} prev={ppVol} />
+                <td className="py-2 px-2 text-right align-top">
+                  <CellLink symbol={symbol} strike={kStr} metric="put-vol" cur={putVol} prev={pPutVol} showPrevInline={showPrevInline} label="Put Vol" />
                 </td>
-                <td className="py-2 px-2 text-right">
-                  <HoverDelta label="Put OI" cur={pOI} prev={ppOI} />
+                <td className="py-2 px-2 text-right align-top">
+                  <CellLink symbol={symbol} strike={kStr} metric="put-oi" cur={pOI} prev={ppOI} showPrevInline={showPrevInline} label="Put OI" />
                 </td>
               </tr>
             );
@@ -137,8 +151,31 @@ export default function OptionChainTable({ snapshots }) {
       </table>
 
       <p className="mt-2 text-[11px] text-gray-400">
-        Hover OI/Vol cells to see previous snapshot value and change (Δ).
+        Click OI/Vol cells to open a detailed graph & analysis for that strike. {showPrevInline ? 'Previous snapshot values are shown under the current number.' : 'Hover to see previous values.'}
       </p>
     </div>
+  );
+}
+
+function CellLink({ symbol, strike, metric, cur, prev, showPrevInline, label }) {
+  const d = cur != null && prev != null ? cur - prev : null;
+  const sign = d == null ? '' : d > 0 ? '+' : '';
+  const color = d == null ? 'text-gray-300' : d > 0 ? 'text-green-400' : d < 0 ? 'text-red-400' : 'text-gray-300';
+
+  return (
+    <Link
+      href={`/optiondata/${symbol}/strike/${encodeURIComponent(strike)}/${metric}`}
+      className="group inline-block"
+      title={`${label} details for ${strike}`}
+    >
+      <div className="underline-offset-2 group-hover:underline">
+        {cur == null ? '-' : cur.toLocaleString('en-IN')}
+      </div>
+      {showPrevInline && (
+        <div className="text-[10px] mt-0.5 text-gray-400">
+          Prev: {prev == null ? '-' : prev.toLocaleString('en-IN')} · <span className={color}>{d == null ? '-' : `${sign}${d.toLocaleString('en-IN')}`}</span>
+        </div>
+      )}
+    </Link>
   );
 }
