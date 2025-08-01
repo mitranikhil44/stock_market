@@ -29,7 +29,7 @@ export default function OptionChainChart({ snapshot }) {
 
   const yLeftKey1 = metric === 'oi' ? 'callOI' : 'callVol';
   const yLeftKey2 = metric === 'oi' ? 'putOI' : 'putVol';
-console.log('parseNum type =', typeof parseNum);
+  
   return (
     <div className="bg-white/5 border border-white/10 backdrop-blur rounded-2xl p-3 sm:p-5">
       <div className="flex items-center justify-between mb-3">
