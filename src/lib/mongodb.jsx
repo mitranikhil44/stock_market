@@ -9,27 +9,25 @@ if (!MONGODB_URI) {
 let cached = global.mongoose || { conn: null, promise: null };
 
 export async function connectToMongo() {
-   if (mongoose.connection.readyState === 1) return;
+  if (mongoose.connection.readyState === 1) {
+    console.log("✅ Already connected to MongoDB.");
+    return;
+  }
+
   if (cached.conn) {
-    console.log("✅ MongoDB already connected!");
+    console.log("✅ MongoDB already connected (cached).");
     return cached.conn;
   }
 
   if (!cached.promise) {
     console.log("⏳ Connecting to MongoDB...");
-    cached.promise = mongoose
-      .connect(MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      })
-      .then((m) => {
-        console.log("✅ MongoDB connected successfully!");
-        return m;
-      })
-      .catch((error) => {
-        console.error("❌ MongoDB connection error:", error);
-        throw error;
-      });
+    cached.promise = mongoose.connect(MONGODB_URI).then((m) => {
+      console.log("✅ MongoDB connected successfully!");
+      return m;
+    }).catch((err) => {
+      console.error("❌ MongoDB connection failed:", err);
+      throw err;
+    });
   }
 
   cached.conn = await cached.promise;

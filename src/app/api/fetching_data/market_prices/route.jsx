@@ -11,9 +11,6 @@ import MidcapNiftyMarketPrice     from "@/models/Midcap_Nifty_50_Market_Price";
 // scraper fn
 import get_live_market_price      from "@/components/functions/get_live_market_price";
 
-export const runtime = "nodejs";
-export const revalidate = 0;
-
 export async function GET() {
   try {
     await connectToMongo();

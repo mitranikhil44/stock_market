@@ -12,10 +12,6 @@ import MidcapNiftyOptionChainData from "@/models/Midcap_Nifty_50_Option_Chain_Da
 import get_option_chain_data      from "@/components/functions/get_option_chain_data";
 import CheckAndUpdateExpiryDate   from "@/components/CheckAndUpdateExpiryDate";
 
-export const runtime = "nodejs";
-export const revalidate = 0;
-export const dynamic = "force-dynamic";
-
 
 export async function GET() {
   try {
