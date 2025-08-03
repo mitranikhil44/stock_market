@@ -43,9 +43,9 @@ function normalizeTimeLabel(ts) {
 function compactNum(n) {
   if (n == null) return '';
   const abs = Math.abs(n);
-  if (abs >= 1_00_00_000) return (n / 1_00_00_000).toFixed(1) + 'Cr'; // Indian format (Cr)
-  if (abs >= 1_00_000) return (n / 1_00_000).toFixed(1) + 'L';        // Lakh
-  if (abs >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+  if (abs >= 1_00_00_000) return (n / 1_00_00_000).toFixed(1) + 'Cr';
+  if (abs >= 1_00_000)    return (n / 1_00_000).toFixed(1) + 'L';
+  if (abs >= 1_000)      return (n / 1_000).toFixed(1) + 'k';
   return String(n);
 }
 
@@ -64,13 +64,14 @@ function useIsSmall() {
 // ---------- page ----------
 export default function OptionMarketPrice() {
   const [index, setIndex] = useState('nifty_50');
-  const [chartType, setChartType] = useState('line'); // 'line' | 'bar'
+  const [period, setPeriod] = useState('1w');       // new!
+  const [chartType, setChartType] = useState('line');
   const [showVolume, setShowVolume] = useState(true);
-  const [showSMA5, setShowSMA5] = useState(true);
-  const [showSMA20, setShowSMA20] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [raw, setRaw] = useState([]); // raw array from API
-  const [error, setError] = useState('');
+  const [showSMA5, setShowSMA5]       = useState(true);
+  const [showSMA20, setShowSMA20]     = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [raw, setRaw]                 = useState([]); // now a flat array
+  const [error, setError]             = useState('');
   const isSmall = useIsSmall();
 
   useEffect(() => {
@@ -79,10 +80,18 @@ export default function OptionMarketPrice() {
       try {
         setError('');
         setLoading(true);
-        const res = await axios.get(`/api/market_data/price/${index}`);
+        const res = await axios.get(
+          `/api/market_data/price?symbol=${index}&period=${period}`
+        );
         if (!mounted) return;
-        const arr = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-        setRaw(arr);
+
+        if (res.data.success) {
+          const grouped = res.data.data || {};
+          const flat = Object.values(grouped).flat();
+          setRaw(flat);
+        } else {
+          throw new Error(res.data.error || 'Unknown error');
+        }
       } catch (e) {
         setError('Failed to load market data. Please try again.');
         console.error(e);
@@ -91,27 +100,30 @@ export default function OptionMarketPrice() {
       }
     })();
     return () => { mounted = false; };
-  }, [index]);
-
+  }, [index, period]);
+  
+  // same mapping / SMA / stats logic as before
   const data = useMemo(() => {
     if (!raw?.length) return [];
-    const mapped = raw.map(d => ({
-      time: normalizeTimeLabel(d.timestamp ?? d.time ?? d.t),
+    const mapped = raw[0].data
+    .map(d => ({
+      time: normalizeTimeLabel(d.timestamp),
       price: Number(d.price),
-      volume: Number(d.volume ?? 0),
-    })).filter(row => Number.isFinite(row.price));
-
+      volume: Number(d.volume),
+    }))
+    .filter(r => Number.isFinite(r.price));
+    
     const prices = mapped.map(m => m.price);
     const sma5 = SMA(prices, 5);
     const sma20 = SMA(prices, 20);
-
+    
     return mapped.map((row, i) => ({
       ...row,
       sma5: sma5[i],
       sma20: sma20[i],
     }));
   }, [raw]);
-
+  
   const stats = useMemo(() => {
     if (!data.length) return null;
     const prices = data.map(d => d.price);
@@ -133,21 +145,37 @@ export default function OptionMarketPrice() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
         <div>
           <h1 className="text-lg sm:text-2xl font-bold text-white">Analysis</h1>
-          <p className="text-xs sm:text-sm text-gray-400">Intraday price analysis with SMA and volume</p>
+          <p className="text-xs sm:text-sm text-gray-400">
+            Intraday price analysis ({period.toUpperCase()})
+          </p>
         </div>
-
         <div className="flex flex-wrap items-center gap-2">
+          {/* Symbol */}
           <select
             value={index}
             onChange={e => setIndex(e.target.value)}
             className="text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
           >
             <option value="nifty_50">Nifty 50</option>
-            <option value="nifty_bank">Bank Nifty</option>
-            <option value="nifty_financial">Fin Nifty</option>
-            <option value="nifty_midcap_50">Midcap 50</option>
+            <option value="bank_nifty">Bank Nifty</option>
+            <option value="fin_nifty">Fin Nifty</option>
+            <option value="midcap_nifty_50">Midcap 50</option>
           </select>
-
+          {/* Period */}
+          <select
+            value={period}
+            onChange={e => setPeriod(e.target.value)}
+            className="text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
+          >
+            <option value="1d">Today</option>
+            <option value="1w">1W</option>
+            <option value="1m">1M</option>
+            <option value="3m">3M</option>
+            <option value="1y">1Y</option>
+            <option value="3y">3Y</option>
+            <option value="all">All</option>
+          </select>
+          {/* Chart type & toggles */}
           <select
             value={chartType}
             onChange={e => setChartType(e.target.value)}
@@ -156,7 +184,6 @@ export default function OptionMarketPrice() {
             <option value="line">Line</option>
             <option value="bar">Bar</option>
           </select>
-
           <label className="flex items-center gap-2 text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2">
             <input
               type="checkbox"
@@ -165,23 +192,21 @@ export default function OptionMarketPrice() {
             />
             Volume
           </label>
-
           <label className="flex items-center gap-2 text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2">
             <input
               type="checkbox"
               checked={showSMA5}
               onChange={e => setShowSMA5(e.target.checked)}
             />
-            SMA‑5
+            SMA-5
           </label>
-
           <label className="flex items-center gap-2 text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2">
             <input
               type="checkbox"
               checked={showSMA20}
               onChange={e => setShowSMA20(e.target.checked)}
             />
-            SMA‑20
+            SMA-20
           </label>
         </div>
       </div>
@@ -195,7 +220,9 @@ export default function OptionMarketPrice() {
         <Stat
           label="Change"
           value={
-            stats ? `${toINR(stats.chg)} (${(stats.chgPct >= 0 ? '+' : '')}${stats.chgPct.toFixed(2)}%)` : '-'
+            stats
+              ? `${toINR(stats.chg)} (${stats.chgPct >= 0 ? '+' : ''}${stats.chgPct.toFixed(2)}%)`
+              : '-'
           }
           accent={stats?.chg >= 0 ? 'up' : 'down'}
         />
@@ -245,19 +272,25 @@ export default function OptionMarketPrice() {
                   />
                 )}
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0b1220', color: '#fff', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}
+                  contentStyle={{
+                    backgroundColor: '#0b1220',
+                    color: '#fff',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
                   labelStyle={{ color: '#fbbf24' }}
                   formatter={(value, name) => {
                     if (name === 'price') return [`₹${Number(value).toFixed(2)}`, 'Price'];
-                    if (name === 'sma5') return [`₹${Number(value).toFixed(2)}`, 'SMA‑5'];
-                    if (name === 'sma20') return [`₹${Number(value).toFixed(2)}`, 'SMA‑20'];
+                    if (name === 'sma5') return [`₹${Number(value).toFixed(2)}`, 'SMA-5'];
+                    if (name === 'sma20') return [`₹${Number(value).toFixed(2)}`, 'SMA-20'];
                     if (name === 'volume') return [compactNum(Number(value)), 'Volume'];
                     return [value, name];
                   }}
-                  labelFormatter={(label) => `Time: ${label}`}
+                  labelFormatter={label => `Time: ${label}`}
                 />
-
-                {!isSmall && <Legend verticalAlign="top" height={24} wrapperStyle={{ color: '#cbd5e1' }} />}
+                {!isSmall && (
+                  <Legend verticalAlign="top" height={24} wrapperStyle={{ color: '#cbd5e1' }} />
+                )}
 
                 {/* price series */}
                 {chartType === 'bar' ? (
@@ -274,14 +307,12 @@ export default function OptionMarketPrice() {
                     activeDot={{ r: 4 }}
                   />
                 )}
-
-                {/* indicators */}
                 {showSMA5 && (
                   <Line
                     yAxisId="price"
                     type="monotone"
                     dataKey="sma5"
-                    name="SMA‑5"
+                    name="SMA-5"
                     stroke="#10b981"
                     strokeDasharray="4 3"
                     dot={false}
@@ -292,14 +323,12 @@ export default function OptionMarketPrice() {
                     yAxisId="price"
                     type="monotone"
                     dataKey="sma20"
-                    name="SMA‑20"
+                    name="SMA-20"
                     stroke="#f59e0b"
                     strokeDasharray="5 4"
                     dot={false}
                   />
                 )}
-
-                {/* volume bars on secondary axis (optional) */}
                 {showVolume && (
                   <Bar
                     yAxisId="vol"
@@ -309,14 +338,8 @@ export default function OptionMarketPrice() {
                     opacity={0.7}
                   />
                 )}
-
                 {!isSmall && (
-                  <Brush
-                    dataKey="time"
-                    height={22}
-                    travellerWidth={8}
-                    stroke="#9ca3af"
-                  />
+                  <Brush dataKey="time" height={22} travellerWidth={8} stroke="#9ca3af" />
                 )}
               </ChartComp>
             </ResponsiveContainer>
@@ -324,7 +347,7 @@ export default function OptionMarketPrice() {
         )}
       </div>
 
-      {/* Small footer / quick links */}
+      {/* Footer */}
       <div className="flex justify-end mt-3">
         <Link href="/marketprice" className="text-xs sm:text-sm text-sky-400 hover:underline">
           Go to Market Price →
@@ -340,11 +363,13 @@ function Stat({ label, value, accent }) {
     accent === 'up'
       ? 'text-emerald-400'
       : accent === 'down'
-        ? 'text-rose-400'
-        : 'text-slate-100';
+      ? 'text-rose-400'
+      : 'text-slate-100';
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl shadow-sm p-3">
-      <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-400">{label}</div>
+      <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-400">
+        {label}
+      </div>
       <div className={`text-sm sm:text-base font-semibold ${accentCls}`}>{value}</div>
     </div>
   );

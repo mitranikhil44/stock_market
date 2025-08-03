@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import OptionChainTable from "@/components/OptionChainTable";
-import OptionChainChart from "@/components/graphs/OptionChainChart";
+import OptionChainTable from "@/components/tables_data/OptionChainTable";
+import OptionChainChart from "@/components/graphs_data/OptionChainChart";
 import OptionFlowShift from "@/components/analysis/OptionFlowShift";
 const symbolToIndex = {
   bank_nifty: "nifty_bank",
@@ -35,9 +35,9 @@ export default function OptionDataPage() {
 
         // 2) Get latest index price (for ATM). If your endpoint returns many rows, take last one.
         const priceIndex = symbolToIndex[symbol] || symbol;
-        const mp = await axios.get(`/api/market_data/price/${priceIndex}`);
+        const mp = await axios.get(`/api/market_data/price?symbol=${priceIndex}&period=1d`);        
         const series = Array.isArray(mp.data) ? mp.data : mp.data?.data || [];
-        const last = series.length ? series[series.length - 1] : null;
+        const last = series[0].data.length ? series[0].data[series[0].data.length - 1] : null;
         if (mounted) setSpot(last ? Number(last.price) : null);
       } catch (e) {
         console.error(e);
