@@ -32,39 +32,35 @@ export default async function scalpGroupedMarketPrice(indexUrl, indexDatabase) {
     const livePrice = await getLivePrice(indexUrl);
     if (!livePrice) return null;
 
-    // 1) Compute “now” in IST by adding UTC+5:30
-    const nowUtcMs   = Date.now();
-    const istOffset  = 5.5 * 60 * 60 * 1000;
-    const nowIst     = new Date(nowUtcMs + istOffset);
-
-    // 2) Build a YYYY-MM-DD string for the date field
-    const year  = nowIst.getFullYear();
-    const month = String(nowIst.getMonth() + 1).padStart(2, "0");
-    const day   = String(nowIst.getDate()).padStart(2, "0");
-    const dateStr = `${year}-${month}-${day}`;  
-
-    // 3) Build the timestamp string for this entry
-    const timeStr = nowIst.toLocaleTimeString("en-US", {
+    const nowIst = new Date().toLocaleString("en-US", {
       timeZone: "Asia/Kolkata",
-      hour12:   false,
-    }); // e.g. "15:30:00"
+    });
 
-    // 4) Look for today’s document
-    let existingDoc = await indexDatabase.findOne({ date: dateStr });
+    const istDate = new Date(nowIst);
 
-    // 5) Compute volume based on the last price in today's data (if any)
+    const year = istDate.getFullYear();
+    const month = String(istDate.getMonth() + 1).padStart(2, "0");
+    const day = String(istDate.getDate()).padStart(2, "0");
+    const dateStr = `${day}-${month}-${year}`;
+
+    const timeStr = istDate.toTimeString().split(" ")[0]; // "HH:MM:SS"
+
+    const existingDoc = await indexDatabase.findOne({ date: dateStr });
+
     const lastPrice = existingDoc?.data?.at(-1)?.price || 0;
-    const volume    = Math.max(0, livePrice - lastPrice);
+    const volume = Math.max(0, livePrice - lastPrice);
 
-    const newEntry = { timestamp: timeStr, price: livePrice, volume };
+    const newEntry = {
+      timestamp: timeStr,
+      price: livePrice,
+      volume,
+    };
 
     if (existingDoc) {
-      // 6a) Append to today’s existing doc
       existingDoc.data.push(newEntry);
       await existingDoc.save();
       return existingDoc;
     } else {
-      // 6b) Create a new doc for today
       const newDoc = await indexDatabase.create({
         date: dateStr,
         data: [newEntry],
