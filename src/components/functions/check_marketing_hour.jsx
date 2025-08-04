@@ -22,11 +22,11 @@ export const isIndianMarketOpen = () => {
     timeZone: "Asia/Kolkata",
     weekday: "short",
   });
-
+  
   const currentTime = hours * 60 + minutes;
-  const marketOpenTime = 9 * 60 + 15;
+  const marketOpenTime = 0 * 60 + 15;
   const marketCloseTime = 15 * 60 + 30;
-
+  
   // Market is closed on Saturdays (Sat) and Sundays (Sun)
   if (day === "Sat" || day === "Sun") {
     return false;

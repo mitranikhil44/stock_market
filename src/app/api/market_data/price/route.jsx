@@ -7,9 +7,6 @@ import FinNiftyMarketPrice from "@/models/Fin_Nifty_Market_Price";
 import NiftyMarketPrice from "@/models/Nifty_50_Market_Price";
 import MidcapNiftyMarketPrice from '@/models/Midcap_Nifty_50_Market_Price';
 
-export const dynamic = 'force-dynamic'; // avoid caching on Vercel
-export const revalidate = 0;
-
 // Map common symbols/aliases to models
 const modelMap = {
   // primary keys
@@ -50,8 +47,6 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
 
-    // ?symbol=nifty_50 | bank_nifty | fin_nifty | midcap_nifty_50
-    // or omit to fetch ALL
     const symbol = searchParams.get('symbol');
 
     // ?limit=500 (optional)
@@ -63,7 +58,6 @@ export async function GET(req) {
     // ?fields=timestamp,price,volume  (optional projection)
     const projection = buildProjection(searchParams.get('fields'));
 
-    // ?format=flat  -> returns a single flattened array with `index` field
     const format = (searchParams.get('format') || 'grouped').toLowerCase();
 
     if (symbol) {

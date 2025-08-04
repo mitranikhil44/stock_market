@@ -64,7 +64,7 @@ function useIsSmall() {
 // ---------- page ----------
 export default function OptionMarketPrice() {
   const [index, setIndex] = useState('nifty_50');
-  const [period, setPeriod] = useState('1w');       // new!
+  const [period, setPeriod] = useState('1d');       // new!
   const [chartType, setChartType] = useState('line');
   const [showVolume, setShowVolume] = useState(true);
   const [showSMA5, setShowSMA5]       = useState(true);

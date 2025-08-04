@@ -7,8 +7,6 @@ import FinNiftyOptionData from '@/models/Fin_Nifty_Option_Chain_Data';
 import NiftyOptionData from '@/models/Nifty_50_Option_Chain_Data';
 import MidcapNiftyOptionData from '@/models/Midcap_Nifty_50_Option_Chain_Data';
 
-export const dynamic = 'force-dynamic'; // avoid caching on Vercel
-export const revalidate = 0;
 
 // Map common symbols/aliases to models
 const modelMap = {
