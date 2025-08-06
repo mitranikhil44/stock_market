@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import {
   ResponsiveContainer,
   LineChart,
@@ -14,13 +14,13 @@ import {
   CartesianGrid,
   Legend,
   Brush,
-} from 'recharts';
-import Link from 'next/link';
+} from "recharts";
+import Link from "next/link";
 
 // ---------- helpers ----------
 function toINR(n) {
-  if (n == null || Number.isNaN(n)) return '-';
-  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  if (n == null || Number.isNaN(n)) return "-";
+  return n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 function SMA(values, period) {
   const out = new Array(values.length).fill(null);
@@ -32,20 +32,29 @@ function SMA(values, period) {
   }
   return out;
 }
+
 function normalizeTimeLabel(ts) {
-  const parts = String(ts ?? '').trim().split(' ');
-  if (parts.length >= 2) {
-    const hm = parts[0]?.split(':') ?? [];
-    if (hm.length >= 2) return `${hm[0]}:${hm[1]} ${parts[1]}`;
-  }
-  return String(ts ?? '');
+  if (!ts) return '';
+
+  const [timePart, meridiemPart] = ts.trim().split(' '); 
+  const [hoursStr, minutesStr] = timePart?.split(':') ?? [];
+
+  let hours = parseInt(hoursStr, 10);
+  const minutes = minutesStr ?? '00';
+
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12; 
+
+  return `${hours}:${minutes} ${suffix}`;
 }
+
+
 function compactNum(n) {
-  if (n == null) return '';
+  if (n == null) return "";
   const abs = Math.abs(n);
-  if (abs >= 1_00_00_000) return (n / 1_00_00_000).toFixed(1) + 'Cr';
-  if (abs >= 1_00_000)    return (n / 1_00_000).toFixed(1) + 'L';
-  if (abs >= 1_000)      return (n / 1_000).toFixed(1) + 'k';
+  if (abs >= 1_00_00_000) return (n / 1_00_00_000).toFixed(1) + "Cr";
+  if (abs >= 1_00_000) return (n / 1_00_000).toFixed(1) + "L";
+  if (abs >= 1_000) return (n / 1_000).toFixed(1) + "k";
   return String(n);
 }
 
@@ -55,30 +64,30 @@ function useIsSmall() {
   useEffect(() => {
     const onResize = () => setIsSmall(window.innerWidth < 640);
     onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
   return isSmall;
 }
 
 // ---------- page ----------
 export default function OptionMarketPrice() {
-  const [index, setIndex] = useState('nifty_50');
-  const [period, setPeriod] = useState('1d');       // new!
-  const [chartType, setChartType] = useState('line');
+  const [index, setIndex] = useState("nifty_50");
+  const [period, setPeriod] = useState("1d"); // new!
+  const [chartType, setChartType] = useState("line");
   const [showVolume, setShowVolume] = useState(true);
-  const [showSMA5, setShowSMA5]       = useState(true);
-  const [showSMA20, setShowSMA20]     = useState(false);
-  const [loading, setLoading]         = useState(false);
-  const [raw, setRaw]                 = useState([]); // now a flat array
-  const [error, setError]             = useState('');
+  const [showSMA5, setShowSMA5] = useState(true);
+  const [showSMA20, setShowSMA20] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [raw, setRaw] = useState([]); // now a flat array
+  const [error, setError] = useState("");
   const isSmall = useIsSmall();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        setError('');
+        setError("");
         setLoading(true);
         const res = await axios.get(
           `/api/market_data/price?symbol=${index}&period=${period}`
@@ -90,43 +99,45 @@ export default function OptionMarketPrice() {
           const flat = Object.values(grouped).flat();
           setRaw(flat);
         } else {
-          throw new Error(res.data.error || 'Unknown error');
+          throw new Error(res.data.error || "Unknown error");
         }
       } catch (e) {
-        setError('Failed to load market data. Please try again.');
+        setError("Failed to load market data. Please try again.");
         console.error(e);
       } finally {
         setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [index, period]);
-  
+
   // same mapping / SMA / stats logic as before
   const data = useMemo(() => {
     if (!raw?.length) return [];
-    const mapped = raw[0].data
-    .map(d => ({
-      time: normalizeTimeLabel(d.timestamp),
-      price: Number(d.price),
-      volume: Number(d.volume),
-    }))
-    .filter(r => Number.isFinite(r.price));
-    
-    const prices = mapped.map(m => m.price);
+    const mapped = raw
+      .map((d) => ({
+        time: normalizeTimeLabel(d.timestamp),
+        price: Number(d.price),
+        volume: Number(d.volume),
+      }))
+      .filter((r) => Number.isFinite(r.price));
+
+    const prices = mapped.map((m) => m.price);
     const sma5 = SMA(prices, 5);
     const sma20 = SMA(prices, 20);
-    
+
     return mapped.map((row, i) => ({
       ...row,
       sma5: sma5[i],
       sma20: sma20[i],
     }));
   }, [raw]);
-  
+
   const stats = useMemo(() => {
     if (!data.length) return null;
-    const prices = data.map(d => d.price);
+    const prices = data.map((d) => d.price);
     const high = Math.max(...prices);
     const low = Math.min(...prices);
     const open = prices[0];
@@ -137,7 +148,7 @@ export default function OptionMarketPrice() {
     return { high, low, open, close, chg, chgPct, volSum };
   }, [data]);
 
-  const ChartComp = chartType === 'bar' ? BarChart : LineChart;
+  const ChartComp = chartType === "bar" ? BarChart : LineChart;
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
@@ -153,7 +164,7 @@ export default function OptionMarketPrice() {
           {/* Symbol */}
           <select
             value={index}
-            onChange={e => setIndex(e.target.value)}
+            onChange={(e) => setIndex(e.target.value)}
             className="text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
           >
             <option value="nifty_50">Nifty 50</option>
@@ -164,10 +175,10 @@ export default function OptionMarketPrice() {
           {/* Period */}
           <select
             value={period}
-            onChange={e => setPeriod(e.target.value)}
+            onChange={(e) => setPeriod(e.target.value)}
             className="text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
           >
-            <option value="1d">Today</option>
+            <option value="1d">1D</option>
             <option value="1w">1W</option>
             <option value="1m">1M</option>
             <option value="3m">3M</option>
@@ -178,7 +189,7 @@ export default function OptionMarketPrice() {
           {/* Chart type & toggles */}
           <select
             value={chartType}
-            onChange={e => setChartType(e.target.value)}
+            onChange={(e) => setChartType(e.target.value)}
             className="text-xs sm:text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
           >
             <option value="line">Line</option>
@@ -188,7 +199,7 @@ export default function OptionMarketPrice() {
             <input
               type="checkbox"
               checked={showVolume}
-              onChange={e => setShowVolume(e.target.checked)}
+              onChange={(e) => setShowVolume(e.target.checked)}
             />
             Volume
           </label>
@@ -196,7 +207,7 @@ export default function OptionMarketPrice() {
             <input
               type="checkbox"
               checked={showSMA5}
-              onChange={e => setShowSMA5(e.target.checked)}
+              onChange={(e) => setShowSMA5(e.target.checked)}
             />
             SMA-5
           </label>
@@ -204,7 +215,7 @@ export default function OptionMarketPrice() {
             <input
               type="checkbox"
               checked={showSMA20}
-              onChange={e => setShowSMA20(e.target.checked)}
+              onChange={(e) => setShowSMA20(e.target.checked)}
             />
             SMA-20
           </label>
@@ -221,10 +232,12 @@ export default function OptionMarketPrice() {
           label="Change"
           value={
             stats
-              ? `${toINR(stats.chg)} (${stats.chgPct >= 0 ? '+' : ''}${stats.chgPct.toFixed(2)}%)`
-              : '-'
+              ? `${toINR(stats.chg)} (${
+                  stats.chgPct >= 0 ? "+" : ""
+                }${stats.chgPct.toFixed(2)}%)`
+              : "-"
           }
-          accent={stats?.chg >= 0 ? 'up' : 'down'}
+          accent={stats?.chg >= 0 ? "up" : "down"}
         />
         <Stat label="Volume Σ" value={toINR(stats?.volSum)} />
       </div>
@@ -232,7 +245,9 @@ export default function OptionMarketPrice() {
       {/* Chart Card */}
       <div className="bg-white/5 border border-white/10 rounded-2xl shadow-md p-3 sm:p-5">
         {loading ? (
-          <p className="text-center py-10 text-gray-400">Loading market data…</p>
+          <p className="text-center py-10 text-gray-400">
+            Loading market data…
+          </p>
         ) : error ? (
           <p className="text-center py-10 text-red-400">{error}</p>
         ) : !data.length ? (
@@ -242,12 +257,17 @@ export default function OptionMarketPrice() {
             <ResponsiveContainer width="100%" height="100%">
               <ChartComp
                 data={data}
-                margin={{ top: 10, right: isSmall ? 10 : 20, left: 0, bottom: isSmall ? 30 : 40 }}
+                margin={{
+                  top: 10,
+                  right: isSmall ? 10 : 20,
+                  left: 0,
+                  bottom: isSmall ? 30 : 40,
+                }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
                 <XAxis
                   dataKey="time"
-                  tick={{ fontSize: isSmall ? 9 : 10, fill: '#cbd5e1' }}
+                  tick={{ fontSize: isSmall ? 9 : 10, fill: "#cbd5e1" }}
                   angle={isSmall ? -20 : -30}
                   textAnchor="end"
                   height={isSmall ? 42 : 50}
@@ -256,45 +276,58 @@ export default function OptionMarketPrice() {
                 />
                 <YAxis
                   yAxisId="price"
-                  tick={{ fontSize: isSmall ? 9 : 10, fill: '#cbd5e1' }}
+                  tick={{ fontSize: isSmall ? 9 : 10, fill: "#cbd5e1" }}
                   width={isSmall ? 46 : 60}
-                  domain={['dataMin - 15', 'dataMax + 15']}
+                  domain={["dataMin - 15", "dataMax + 15"]}
                   tickFormatter={compactNum}
                 />
                 {showVolume && (
                   <YAxis
                     yAxisId="vol"
                     orientation="right"
-                    tick={{ fontSize: isSmall ? 9 : 10, fill: '#cbd5e1' }}
+                    tick={{ fontSize: isSmall ? 9 : 10, fill: "#cbd5e1" }}
                     width={isSmall ? 40 : 50}
-                    domain={[0, 'dataMax']}
+                    domain={[0, "dataMax"]}
                     tickFormatter={compactNum}
                   />
                 )}
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0b1220',
-                    color: '#fff',
+                    backgroundColor: "#0b1220",
+                    color: "#fff",
                     borderRadius: 8,
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: "1px solid rgba(255,255,255,0.1)",
                   }}
-                  labelStyle={{ color: '#fbbf24' }}
+                  labelStyle={{ color: "#fbbf24" }}
                   formatter={(value, name) => {
-                    if (name === 'price') return [`₹${Number(value).toFixed(2)}`, 'Price'];
-                    if (name === 'sma5') return [`₹${Number(value).toFixed(2)}`, 'SMA-5'];
-                    if (name === 'sma20') return [`₹${Number(value).toFixed(2)}`, 'SMA-20'];
-                    if (name === 'volume') return [compactNum(Number(value)), 'Volume'];
+                    if (name === "price")
+                      return [`₹${Number(value).toFixed(2)}`, "Price"];
+                    if (name === "sma5")
+                      return [`₹${Number(value).toFixed(2)}`, "SMA-5"];
+                    if (name === "sma20")
+                      return [`₹${Number(value).toFixed(2)}`, "SMA-20"];
+                    if (name === "volume")
+                      return [compactNum(Number(value)), "Volume"];
                     return [value, name];
                   }}
-                  labelFormatter={label => `Time: ${label}`}
+                  labelFormatter={(label) => `Time: ${label}`}
                 />
                 {!isSmall && (
-                  <Legend verticalAlign="top" height={24} wrapperStyle={{ color: '#cbd5e1' }} />
+                  <Legend
+                    verticalAlign="top"
+                    height={24}
+                    wrapperStyle={{ color: "#cbd5e1" }}
+                  />
                 )}
 
                 {/* price series */}
-                {chartType === 'bar' ? (
-                  <Bar yAxisId="price" dataKey="price" name="Price" fill="#3b82f6" />
+                {chartType === "bar" ? (
+                  <Bar
+                    yAxisId="price"
+                    dataKey="price"
+                    name="Price"
+                    fill="#3b82f6"
+                  />
                 ) : (
                   <Line
                     yAxisId="price"
@@ -339,7 +372,12 @@ export default function OptionMarketPrice() {
                   />
                 )}
                 {!isSmall && (
-                  <Brush dataKey="time" height={22} travellerWidth={8} stroke="#9ca3af" />
+                  <Brush
+                    dataKey="time"
+                    height={22}
+                    travellerWidth={8}
+                    stroke="#9ca3af"
+                  />
                 )}
               </ChartComp>
             </ResponsiveContainer>
@@ -349,7 +387,10 @@ export default function OptionMarketPrice() {
 
       {/* Footer */}
       <div className="flex justify-end mt-3">
-        <Link href="/marketprice" className="text-xs sm:text-sm text-sky-400 hover:underline">
+        <Link
+          href="/marketprice"
+          className="text-xs sm:text-sm text-sky-400 hover:underline"
+        >
           Go to Market Price →
         </Link>
       </div>
@@ -360,17 +401,19 @@ export default function OptionMarketPrice() {
 // ---------- small stat card ----------
 function Stat({ label, value, accent }) {
   const accentCls =
-    accent === 'up'
-      ? 'text-emerald-400'
-      : accent === 'down'
-      ? 'text-rose-400'
-      : 'text-slate-100';
+    accent === "up"
+      ? "text-emerald-400"
+      : accent === "down"
+      ? "text-rose-400"
+      : "text-slate-100";
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl shadow-sm p-3">
       <div className="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-400">
         {label}
       </div>
-      <div className={`text-sm sm:text-base font-semibold ${accentCls}`}>{value}</div>
+      <div className={`text-sm sm:text-base font-semibold ${accentCls}`}>
+        {value}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import OptionChainTable from "@/components/tables_data/OptionChainTable";
 import OptionChainChart from "@/components/graphs_data/OptionChainChart";
-import OptionFlowShift from "@/components/analysis/OptionFlowShift";
+
 const symbolToIndex = {
   bank_nifty: "nifty_bank",
   nifty_50: "nifty_50",
@@ -17,7 +17,7 @@ export default function OptionDataPage() {
   const [loading, setLoading] = useState(true);
   const [symbol, setSymbol] = useState("nifty_50");
   const [error, setError] = useState("");
-  const [spot, setSpot] = useState(null); // ✅ underlying index LTP for ATM highlight
+  const [spot, setSpot] = useState(null); 
 
   useEffect(() => {
     let mounted = true;
@@ -33,12 +33,16 @@ export default function OptionDataPage() {
         const arr = oc.data?.data || [];
         if (mounted) setSnapshots(arr);
 
-        // 2) Get latest index price (for ATM). If your endpoint returns many rows, take last one.
         const priceIndex = symbolToIndex[symbol] || symbol;
-        const mp = await axios.get(`/api/market_data/price?symbol=${priceIndex}&period=1d`);        
-        const series = Array.isArray(mp.data) ? mp.data : mp.data?.data || [];
-        const last = series[0].data.length ? series[0].data[series[0].data.length - 1] : null;
-        if (mounted) setSpot(last ? Number(last.price) : null);
+        const mp = await axios.get(
+          `/api/market_data/price?symbol=${priceIndex}&period=1d`
+        );
+        const seriesRaw = mp.data?.data || {};
+        const allSeries = Object.values(seriesRaw).flat();
+        const lastItem =
+          allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
+        if (mounted) setSpot(lastItem ? Number(lastItem.price) : null);
+        
       } catch (e) {
         console.error(e);
         if (mounted) setError("Failed to load option data or spot.");
@@ -51,8 +55,6 @@ export default function OptionDataPage() {
     };
   }, [symbol]);
 
-  const latest = snapshots[snapshots.length - 1] || null;
-  const prev = snapshots[snapshots.length - 2] || null;
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
       <div className="flex items-center justify-between mb-4">
@@ -87,18 +89,6 @@ export default function OptionDataPage() {
           <div className="mt-6">
             <OptionChainChart snapshot={snapshots[snapshots.length - 1]} />
           </div>
-
-          {latest && prev && (
-            <div className="mt-6">
-              <OptionFlowShift
-                latestSnapshot={latest}
-                prevSnapshot={prev}
-                symbol={symbol}
-                topN={8} // optional
-                minAbsChange={1000} // tiny noise filter
-              />
-            </div>
-          )}
         </>
       )}
     </div>

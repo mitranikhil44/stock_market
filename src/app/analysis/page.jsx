@@ -1,8 +1,10 @@
-"use client"
+"use client";
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import OptionChainTable from "@/components/tables_data/OptionChainTable";
+import OptionChainChart from "@/components/graphs_data/OptionChainChart";
 import OptionFlowShift from "@/components/analysis/OptionFlowShift";
-
 const symbolToIndex = {
   bank_nifty: "nifty_bank",
   nifty_50: "nifty_50",
@@ -11,11 +13,11 @@ const symbolToIndex = {
 };
 
 const analysis = () => {
-      const [snapshots, setSnapshots] = useState([]);
+  const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [symbol, setSymbol] = useState("nifty_50");
   const [error, setError] = useState("");
-  const [spot, setSpot] = useState(null); // ✅ underlying index LTP for ATM highlight
+  const [spot, setSpot] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -31,12 +33,18 @@ const analysis = () => {
         const arr = oc.data?.data || [];
         if (mounted) setSnapshots(arr);
 
-        // 2) Get latest index price (for ATM). If your endpoint returns many rows, take last one.
         const priceIndex = symbolToIndex[symbol] || symbol;
-        const mp = await axios.get(`/api/market_data/price/${priceIndex}`);
-        const series = Array.isArray(mp.data) ? mp.data : mp.data?.data || [];
-        const last = series.length ? series[series.length - 1] : null;
-        if (mounted) setSpot(last ? Number(last.price) : null);
+        const mp = await axios.get(
+          `/api/market_data/price?symbol=${priceIndex}&period=1d`
+        );
+        const seriesRaw = mp.data?.data || {};
+        const allSeries = Object.values(seriesRaw).flat();
+        const lastItem =
+          allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
+        const last = lastItem?.data?.length
+          ? lastItem.data[lastItem.data.length - 1]
+          : null;
+        if (mounted) setSpot(lastItem ? Number(lastItem.price) : null);
       } catch (e) {
         console.error(e);
         if (mounted) setError("Failed to load option data or spot.");
@@ -52,15 +60,14 @@ const analysis = () => {
   const latest = snapshots[snapshots.length - 1] || null;
   const prev = snapshots[snapshots.length - 2] || null;
   return (
-    
     <>
-    {loading ? (
+      {loading ? (
         <p className="text-center text-gray-400 py-10">Loading option chain…</p>
       ) : error ? (
         <p className="text-center text-red-400 py-10">{error}</p>
       ) : (
         <>
-    {latest && prev && (
+          {latest && prev && (
             <div className="mt-6">
               <OptionFlowShift
                 latestSnapshot={latest}
@@ -71,11 +78,10 @@ const analysis = () => {
               />
             </div>
           )}
-          
         </>
       )}
     </>
-  )
-}
+  );
+};
 
-export default analysis
+export default analysis;

@@ -9,9 +9,6 @@ import {
   Tooltip
 } from 'recharts';
 
-// ————————————————————————————
-// Helpers
-// ————————————————————————————
 function parseNum(x) {
   if (x == null) return null;
   const s = String(x).trim();
@@ -21,9 +18,6 @@ function parseNum(x) {
   return m ? Number(m[0]) : null;
 }
 
-// ————————————————————————————
-// CellLink: clickable number + optional prev/delta
-// ————————————————————————————
 function CellLink({ symbol, strike, metric, cur, prev, showPrevInline, label }) {
   const d = cur != null && prev != null ? cur - prev : null;
   const sign = d == null ? '' : d > 0 ? '+' : '';
@@ -55,9 +49,6 @@ function CellLink({ symbol, strike, metric, cur, prev, showPrevInline, label }) 
   );
 }
 
-// ————————————————————————————
-// MiniChartCell: tiny sparkline for OI/Vol
-// ————————————————————————————
 function MiniChartCell({ symbol, strike, metric, snapshots }) {
   const data = snapshots
     .map(snap => {
@@ -93,9 +84,6 @@ function MiniChartCell({ symbol, strike, metric, snapshots }) {
   );
 }
 
-// ————————————————————————————
-// Main Table Component
-// ————————————————————————————
 export default function OptionChainTable({
   snapshots,
   symbol,
