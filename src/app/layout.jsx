@@ -1,6 +1,6 @@
-import './globals.css';
-import Background from '@/components/Background';
-import Navbar from '@/components/Navbar';
+import "./globals.css";
+import Background from "@/components/Background";
+import Navbar from "@/components/Navbar";
 
 export default function RootLayout({ children }) {
   return (
@@ -10,9 +10,9 @@ export default function RootLayout({ children }) {
         <Background />
 
         {/* Content wrapper with safe z-index */}
-        <main className="relative z-10">          
-      <Navbar/>
-          {children}
+        <main className="relative z-10">
+          <Navbar />
+          <div className="container w-full m-auto">{children}</div>
         </main>
       </body>
     </html>

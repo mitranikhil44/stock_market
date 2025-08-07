@@ -14,10 +14,11 @@ const symbolToIndex = {
 
 export default function OptionDataPage() {
   const [snapshots, setSnapshots] = useState([]);
+  const [selectedTimestamp, setSelectedTimestamp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [symbol, setSymbol] = useState("nifty_50");
   const [error, setError] = useState("");
-  const [spot, setSpot] = useState(null); 
+  const [spot, setSpot] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -26,12 +27,14 @@ export default function OptionDataPage() {
         setLoading(true);
         setError("");
 
-        // 1) Get last 2 snapshots (oldest->newest) for delta & latest
         const oc = await axios.get(
           `/api/market_data/option_chain?symbol=${symbol}&sort=asc`
         );
         const arr = oc.data?.data || [];
-        if (mounted) setSnapshots(arr);
+        if (mounted) {
+          setSnapshots(arr);
+          setSelectedTimestamp(arr.length ? arr[arr.length - 1].timestamp : null);
+        }
 
         const priceIndex = symbolToIndex[symbol] || symbol;
         const mp = await axios.get(
@@ -42,7 +45,6 @@ export default function OptionDataPage() {
         const lastItem =
           allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
         if (mounted) setSpot(lastItem ? Number(lastItem.price) : null);
-        
       } catch (e) {
         console.error(e);
         if (mounted) setError("Failed to load option data or spot.");
@@ -55,20 +57,41 @@ export default function OptionDataPage() {
     };
   }, [symbol]);
 
+  const selectedSnapshot = snapshots.find(
+    (snap) => snap.timestamp === selectedTimestamp
+  );
+
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <h1 className="text-xl sm:text-2xl font-bold">Option Data</h1>
-        <select
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
-          className="text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
-        >
-          <option value="bank_nifty">Bank Nifty</option>
-          <option value="nifty_50">Nifty 50</option>
-          <option value="fin_nifty">Fin Nifty</option>
-          <option value="midcap_nifty_50">Midcap 50</option>
-        </select>
+
+        <div className="flex gap-3">
+          <select
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
+          >
+            <option value="bank_nifty">Bank Nifty</option>
+            <option value="nifty_50">Nifty 50</option>
+            <option value="fin_nifty">Fin Nifty</option>
+            <option value="midcap_nifty_50">Midcap 50</option>
+          </select>
+
+          {snapshots.length > 0 && (
+            <select
+              value={selectedTimestamp}
+              onChange={(e) => setSelectedTimestamp(e.target.value)}
+              className="text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
+            >
+              {snapshots.map((snap) => (
+                <option key={snap._id} value={snap.timestamp}>
+                  {snap.timestamp}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -77,17 +100,14 @@ export default function OptionDataPage() {
         <p className="text-center text-red-400 py-10">{error}</p>
       ) : (
         <>
-          {/* ✅ Pass spot to highlight ATM; showPrevInline toggles previous data under current */}
           <OptionChainTable
-            snapshots={snapshots}
+            snapshots={[selectedSnapshot]}
             symbol={symbol}
             underlyingSpot={spot}
             showPrevInline={true}
           />
-
-          {/* Chart from latest snapshot (optional; you already had this) */}
           <div className="mt-6">
-            <OptionChainChart snapshot={snapshots[snapshots.length - 1]} />
+            <OptionChainChart snapshot={selectedSnapshot} />
           </div>
         </>
       )}

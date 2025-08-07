@@ -2,15 +2,51 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import OptionChainTable from "@/components/tables_data/OptionChainTable";
-import OptionChainChart from "@/components/graphs_data/OptionChainChart";
 import OptionFlowShift from "@/components/analysis/OptionFlowShift";
+import PCRTable from "@/components/tables_data/PCRTable";
+import PCRChart from "@/components/graphs_data/PCRTrendChart";
+
 const symbolToIndex = {
   bank_nifty: "nifty_bank",
   nifty_50: "nifty_50",
   fin_nifty: "nifty_financial",
   midcap_nifty_50: "nifty_midcap_50",
 };
+
+function calculateTimewisePCR(snapshots) {
+  const cleanNum = (val) => {
+    if (typeof val !== "string") return 0;
+    if (val === "-" || val.trim() === "") return 0;
+    return Number(val.replace(/,/g, "")) || 0;
+  };
+
+  return snapshots.map((snap) => {
+    let totalCallOI = 0;
+    let totalPutOI = 0;
+    let totalCallVol = 0;
+    let totalPutVol = 0;
+
+    snap.data?.forEach((row) => {
+      totalCallOI += cleanNum(row.CallOI);
+      totalPutOI += cleanNum(row.PutOI);
+      totalCallVol += cleanNum(row.CallVol);
+      totalPutVol += cleanNum(row.PutVol);
+    });
+
+    const pcrOI = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
+    const pcrVol = totalCallVol > 0 ? totalPutVol / totalCallVol : 0;
+
+    return {
+      timestamp: snap.timestamp,
+      totalCallOI,
+      totalPutOI,
+      totalCallVol,
+      totalPutVol,
+      pcrOI: Number(pcrOI.toFixed(2)),
+      pcrVol: Number(pcrVol.toFixed(2)),
+    };
+  });
+}
 
 const analysis = () => {
   const [snapshots, setSnapshots] = useState([]);
@@ -26,7 +62,6 @@ const analysis = () => {
         setLoading(true);
         setError("");
 
-        // 1) Get last 2 snapshots (oldest->newest) for delta & latest
         const oc = await axios.get(
           `/api/market_data/option_chain?symbol=${symbol}&sort=asc`
         );
@@ -67,14 +102,21 @@ const analysis = () => {
         <p className="text-center text-red-400 py-10">{error}</p>
       ) : (
         <>
+          {snapshots.length > 0 && (
+            <>
+              <PCRTable data={calculateTimewisePCR(snapshots)} />
+              <PCRChart data={calculateTimewisePCR(snapshots)} />
+            </>
+          )}
+
           {latest && prev && (
             <div className="mt-6">
               <OptionFlowShift
                 latestSnapshot={latest}
                 prevSnapshot={prev}
                 symbol={symbol}
-                topN={8} // optional
-                minAbsChange={1000} // tiny noise filter
+                topN={8}
+                minAbsChange={1000}
               />
             </div>
           )}
