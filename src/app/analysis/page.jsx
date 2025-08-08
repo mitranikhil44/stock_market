@@ -7,10 +7,10 @@ import PCRTable from "@/components/tables_data/PCRTable";
 import PCRChart from "@/components/graphs_data/PCRTrendChart";
 
 const symbolToIndex = {
-  bank_nifty: "nifty_bank",
+  bank_nifty: "bank_nifty",
   nifty_50: "nifty_50",
-  fin_nifty: "nifty_financial",
-  midcap_nifty_50: "nifty_midcap_50",
+  fin_nifty: "fin_nifty",
+  midcap_nifty_50: "midcap_nifty_50",
 };
 
 function calculateTimewisePCR(snapshots) {
@@ -96,32 +96,51 @@ const analysis = () => {
   const prev = snapshots[snapshots.length - 2] || null;
   return (
     <>
-      {loading ? (
-        <p className="text-center text-gray-400 py-10">Loading option chain…</p>
-      ) : error ? (
-        <p className="text-center text-red-400 py-10">{error}</p>
-      ) : (
-        <>
-          {snapshots.length > 0 && (
-            <>
-              <PCRTable data={calculateTimewisePCR(snapshots)} />
-              <PCRChart data={calculateTimewisePCR(snapshots)} />
-            </>
-          )}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold">Option Data</h1>
+          <div className="flex gap-2">
+            <select
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              className="text-sm bg-white text-gray-900 border rounded-lg px-3 py-2"
+            >
+              <option value="bank_nifty">Bank Nifty</option>
+              <option value="nifty_50">Nifty 50</option>
+              <option value="fin_nifty">Fin Nifty</option>
+              <option value="midcap_nifty_50">Midcap 50</option>
+            </select>
+          </div>
+        </div>
+        {loading ? (
+          <p className="text-center text-gray-400 py-10">
+            Loading option chain…
+          </p>
+        ) : error ? (
+          <p className="text-center text-red-400 py-10">{error}</p>
+        ) : (
+          <>
+            {snapshots.length > 0 && (
+              <>
+                <PCRTable data={calculateTimewisePCR(snapshots)} />
+                <PCRChart data={calculateTimewisePCR(snapshots)} />
+              </>
+            )}
 
-          {latest && prev && (
-            <div className="mt-6">
-              <OptionFlowShift
-                latestSnapshot={latest}
-                prevSnapshot={prev}
-                symbol={symbol}
-                topN={8}
-                minAbsChange={1000}
-              />
-            </div>
-          )}
-        </>
-      )}
+            {latest && prev && (
+              <div className="mt-6">
+                <OptionFlowShift
+                  latestSnapshot={latest}
+                  prevSnapshot={prev}
+                  symbol={symbol}
+                  topN={8}
+                  minAbsChange={1000}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </>
   );
 };
