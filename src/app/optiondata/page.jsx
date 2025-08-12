@@ -71,6 +71,8 @@ export default function OptionDataPage() {
         if (mounted) {
           setSpot(lastItem ? Number(lastItem.price) : null);
         }
+        console.log(mp);
+        
       } catch (e) {
         console.error(e);
         if (mounted) setError("Failed to load option data or spot.");
@@ -84,6 +86,7 @@ export default function OptionDataPage() {
       mounted = false;
     };
   }, [symbol]);
+
 
   // Filter snapshots when timestamp changes
   useEffect(() => {
