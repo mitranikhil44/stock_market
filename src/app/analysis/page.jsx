@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import OptionFlowShift from "@/components/analysis/OptionFlowShift";
 import PCRTable from "@/components/tables_data/PCRTable";
-import PCRChart from "@/components/graphs_data/PCRTrendChart";
+import PCRDiffChart from "@/components/graphs_data/PCRDiffChart";
 
 const symbolToIndex = {
   bank_nifty: "bank_nifty",
@@ -123,10 +123,9 @@ const analysis = () => {
             {snapshots.length > 0 && (
               <>
                 <PCRTable data={calculateTimewisePCR(snapshots)} />
-                <PCRChart data={calculateTimewisePCR(snapshots)} />
+                <PCRDiffChart data={calculateTimewisePCR(snapshots)} />
               </>
             )}
-
             {latest && prev && (
               <div className="mt-6">
                 <OptionFlowShift
