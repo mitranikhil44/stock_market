@@ -92,7 +92,7 @@ export default function OptionChainTable({ snapshots, symbol, underlyingSpot }) 
     return {
       latest: snapshots[snapshots.length - 1],
       prev: snapshots.length >= 2 ? snapshots[snapshots.length - 2] : {},
-      start: snapshots[0] || {},
+      start: snapshots[1] || {},
     };
   }, [snapshots]);
 

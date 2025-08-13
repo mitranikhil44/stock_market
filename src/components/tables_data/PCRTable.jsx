@@ -4,9 +4,20 @@ import React from "react";
 export default function PCRTable({ data }) {
   if (!data || data.length === 0) return null;
 
+  function kFormat(n) {
+    if (n == null) return "-";
+    const a = Math.abs(n);
+    if (a >= 1_00_00_000) return (n / 1_00_00_000).toFixed(4) + "Cr";
+    if (a >= 1_00_000) return (n / 1_00_000).toFixed(4) + "L";
+    if (a >= 1_000) return (n / 1_000).toFixed(4) + "k";
+    return n.toLocaleString();
+  }
+
   return (
     <div className="mt-6">
-      <h2 className="text-xl font-bold mb-4 text-gray-200">Time-wise PCR Table</h2>
+      <h2 className="text-xl font-bold mb-4 text-gray-200">
+        Time-wise PCR Table
+      </h2>
 
       {/* Scrollable container */}
       <div className="max-h-[400px] overflow-y-auto rounded-xl border border-gray-200 shadow-sm">
@@ -31,12 +42,24 @@ export default function PCRTable({ data }) {
                 } hover:bg-blue-50`}
               >
                 <td className="px-4 py-2 font-mono">{row.timestamp}</td>
-                <td className="px-4 py-2 text-center font-semibold text-blue-700">{row.pcrOI}</td>
-                <td className="px-4 py-2 text-center font-semibold text-purple-700">{row.pcrVol}</td>
-                <td className="px-4 py-2 text-right font-mono">{row.totalCallOI.toLocaleString()}</td>
-                <td className="px-4 py-2 text-right font-mono">{row.totalPutOI.toLocaleString()}</td>
-                <td className="px-4 py-2 text-right font-mono">{row.totalCallVol.toLocaleString()}</td>
-                <td className="px-4 py-2 text-right font-mono">{row.totalPutVol.toLocaleString()}</td>
+                <td className="px-4 py-2 text-center font-semibold text-blue-700">
+                  {row.pcrOI}
+                </td>
+                <td className="px-4 py-2 text-center font-semibold text-purple-700">
+                  {row.pcrVol}
+                </td>
+                <td className="px-4 py-2 text-right font-mono">
+                  {kFormat(row.totalCallOI)}
+                </td>
+                <td className="px-4 py-2 text-right font-mono">
+                  {kFormat(row.totalPutOI)}
+                </td>
+                <td className="px-4 py-2 text-right font-mono">
+                  {kFormat(row.totalCallVol)}
+                </td>
+                <td className="px-4 py-2 text-right font-mono">
+                  {kFormat(row.totalPutVol)}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -25,14 +25,15 @@ function signCls(n) {
 function kFormat(n) {
   if (n == null) return "-";
   const a = Math.abs(n);
-  if (a >= 1_00_00_000) return (n / 1_00_00_000).toFixed(1) + "Cr";
-  if (a >= 1_00_000) return (n / 1_00_000).toFixed(1) + "L";
-  if (a >= 1_000) return (n / 1_000).toFixed(1) + "k";
+  if (a >= 1_00_00_000) return (n / 1_00_00_000).toFixed(4) + "Cr";
+  if (a >= 1_00_000) return (n / 1_00_000).toFixed(4) + "L";
+  if (a >= 1_000) return (n / 1_000).toFixed(4) + "k";
   return toIN(n);
 }
 
 // Build array for one side (call|put)
 function buildRows(latest, prev, side) {
+  
   // side: 'call' or 'put'
   const out = [];
   const L = latest?.data ?? [];
@@ -198,7 +199,7 @@ export default function OptionFlowShift({
   topN = 8,
   minAbsChange = 1000,
 }) {
-  const [side, setSide] = useState("both"); // 'both' | 'call' | 'put'
+  const [side, setSide] = useState("both"); // 'both' | 'call' | 'put'  
 
   const built = useMemo(() => {
     const C = buildRows(latestSnapshot, prevSnapshot, "call");
@@ -389,7 +390,7 @@ export default function OptionFlowShift({
           <div
             className={`text-sm font-semibold ${signCls(built.nets.netCallOI)}`}
           >
-            {(built.nets.netCallOI > 0 ? "+" : "") + toIN(built.nets.netCallOI)}
+            {(built.nets.netCallOI > 0 ? "+" : "") + kFormat(built.nets.netCallOI)}
           </div>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
@@ -397,7 +398,7 @@ export default function OptionFlowShift({
           <div
             className={`text-sm font-semibold ${signCls(built.nets.netPutOI)}`}
           >
-            {(built.nets.netPutOI > 0 ? "+" : "") + toIN(built.nets.netPutOI)}
+            {(built.nets.netPutOI > 0 ? "+" : "") + kFormat(built.nets.netPutOI)}
           </div>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
