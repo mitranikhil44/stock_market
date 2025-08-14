@@ -27,7 +27,7 @@ export default function NetOIChart({ timewiseData }) {
   }
 
   // Prepare chart data
-  const chartData = timewiseData.map((item) => {
+  const chartData = timewiseData.slice(1).map((item) => {
     return {
       ...item,
       chgOI: item.totalPutOI - item.totalCallOI,
@@ -62,13 +62,13 @@ export default function NetOIChart({ timewiseData }) {
     <div className="mt-6">
       {/* Mode Selector */}
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-xl font-bold text-gray-800">
+        <h2 className="text-xl font-bold">
           Time-wise {mode}
         </h2>
         <select
           value={mode}
           onChange={(e) => setMode(e.target.value)}
-          className="px-3 py-1 rounded-md border border-gray-400 bg-gray-800 text-white"
+          className="px-3 py-1 rounded-md border border-gray-400 bg-white text-gray-600"
         >
           <option value="OI">OI</option>
           <option value="Volume">Volume</option>
