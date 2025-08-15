@@ -13,23 +13,61 @@ import {
 } from "recharts";
 
 export default function PCRDiffChart({ data }) {
-  const [chartMode, setChartMode] = useState("all");
+  const [chartMode, setChartMode] = useState("PCR"); // Default to PCR
 
-  const SCALE_DIVISOR = 100000; 
+  // Number formatting
+  function kFormat(n) {
+    if (n == null) return "-";
+    const a = Math.abs(n);
+    if (a >= 1_00_00_000) return (n / 1_00_00_000).toFixed(1) + "Cr";
+    if (a >= 1_00_000) return (n / 1_00_000).toFixed(1) + "L";
+    if (a >= 1_000) return (n / 1_000).toFixed(1) + "k";
+    return n.toLocaleString();
+  }
 
-  // Transform & scale data for chart
-  const chartData = data.slice(1).map((d) => {
-    const oiDiff = (d.totalPutOI - d.totalCallOI) / SCALE_DIVISOR;
-    const volDiff = (d.totalPutVol - d.totalCallVol) / SCALE_DIVISOR;
-    const pcr = d.totalCallOI === 0 ? 0 : d.totalPutOI / d.totalCallOI;
+  const SCALE_DIVISOR = 100000;
+
+  // Prepare chart data with safe PCR calculation
+  const chartData = (data || []).map((d) => {
+    const totalCallOI = d.totalCallOI || 0;
+    const totalPutOI = d.totalPutOI || 0;
+    const totalCallVol = d.totalCallVol || 0;
+    const totalPutVol = d.totalPutVol || 0;
 
     return {
       time: d.timestamp,
-      oiDiff,
-      volDiff,
-      pcr,
+      totalCallOI: totalCallOI / SCALE_DIVISOR,
+      totalPutOI: totalPutOI / SCALE_DIVISOR,
+      totalCallVol: totalCallVol / SCALE_DIVISOR,
+      totalPutVol: totalPutVol / SCALE_DIVISOR,
+      chgOI: totalPutOI - totalCallOI,
+      chgVol: totalPutVol - totalCallVol,
+      pcr: totalCallOI > 0 ? totalPutOI / totalCallOI : 0,
     };
   });
+
+  // Dynamic keys
+  let line1Key, line2Key, line1Name, line2Name;
+  if (chartMode === "OI") {
+    line1Key = "totalCallOI";
+    line2Key = "totalPutOI";
+    line1Name = "Call OI";
+    line2Name = "Put OI";
+  } else if (chartMode === "Volume") {
+    line1Key = "totalCallVol";
+    line2Key = "totalPutVol";
+    line1Name = "Call Volume";
+    line2Name = "Put Volume";
+  } else if (chartMode === "Chg OI") {
+    line1Key = "chgOI";
+    line1Name = "Put OI - Call OI";
+  } else if (chartMode === "Chg Volume") {
+    line1Key = "chgVol";
+    line1Name = "Put Volume - Call Volume";
+  } else if (chartMode === "PCR") {
+    line1Key = "pcr";
+    line1Name = "Put/Call Ratio";
+  }
 
   return (
     <div className="shadow-lg rounded-2xl p-4 sm:p-6 mt-6 bg-white text-gray-700">
@@ -40,100 +78,53 @@ export default function PCRDiffChart({ data }) {
           onChange={(e) => setChartMode(e.target.value)}
           className="px-4 py-2 border rounded-lg border-gray-600 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="oi">OI Diff</option>
-          <option value="vol">Volume Diff</option>
-          <option value="pcr">PCR</option>
-          <option value="all">All</option>
+          <option value="PCR">PCR</option>
+          <option value="OI">OI</option>
+          <option value="Volume">Volume</option>
+          <option value="Chg OI">Chg OI</option>
+          <option value="Chg Volume">Chg Volume</option>
         </select>
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" className="text-gray-600" height={400}>
-        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={400}>
+        <LineChart
+          data={chartData}
+          margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
             dataKey="time"
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 12, fill: "#000" }}
             tickLine={false}
             axisLine={false}
           />
-
-          {/* Left Y Axis for OI & Volume */}
           <YAxis
-            yAxisId="left"
-            label={{
-              value: "(Lakhs)",
-              angle: -90,
-              position: "insideLeft",
-              style: { textAnchor: "middle" },
-            }}
+            tickFormatter={kFormat}
             tick={{ fontSize: 12 }}
             tickLine={false}
             axisLine={false}
           />
-
-          {/* Right Y Axis for PCR */}
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            label={{
-              value: "PCR",
-              angle: -90,
-              position: "insideRight",
-              style: { textAnchor: "middle" },
-            }}
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-          />
-
-          <Tooltip
-            formatter={(value, name) =>
-              name.includes("PCR")
-                ? value.toFixed(2)
-                : `${value.toFixed(2)} Lakh`
-            }
-            contentStyle={{
-              backgroundColor: "#fff",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-              fontSize: "12px",
-            }}
-          />
+          <Tooltip formatter={(value) => kFormat(value)} />
           <Legend verticalAlign="top" height={36} iconType="circle" />
 
-          {/* Conditional Lines */}
-          {(chartMode === "oi" || chartMode === "all") && (
+          {/* Lines */}
+          <Line
+            type="monotone"
+            dataKey={line1Key}
+            stroke="#3b82f6"
+            strokeWidth={2}
+            name={line1Name}
+            dot={false}
+          />
+          {line2Key && (
             <Line
-              yAxisId="left"
               type="monotone"
-              dataKey="oiDiff"
-              stroke="#2563eb"
+              dataKey={line2Key}
+              stroke="#f59e0b"
               strokeWidth={2}
+              name={line2Name}
               dot={false}
-              name="OI Diff (Put - Call)"
-            />
-          )}
-          {(chartMode === "vol" || chartMode === "all") && (
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="volDiff"
-              stroke="#f97316"
-              strokeWidth={2}
-              dot={false}
-              name="Vol Diff (Put - Call)"
-            />
-          )}
-          {(chartMode === "pcr" || chartMode === "all") && (
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="pcr"
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              name="PCR"
             />
           )}
         </LineChart>

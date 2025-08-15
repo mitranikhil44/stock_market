@@ -5,7 +5,6 @@ import axios from "axios";
 import OptionFlowShift from "@/components/analysis/OptionFlowShift";
 import PCRTable from "@/components/tables_data/PCRTable";
 import PCRDiffChart from "@/components/graphs_data/PCRDiffChart";
-import NetOIChart from "@/components/graphs_data/NetOIChart";
 
 const symbolToIndex = {
   bank_nifty: "bank_nifty",
@@ -128,7 +127,6 @@ const analysis = () => {
               <>
                 <PCRTable data={calculateTimewisePCR(snapshots)} />
                 <PCRDiffChart data={calculateTimewisePCR(snapshots)} />
-                <NetOIChart timewiseData={timewiseData} />
 
               </>
             )}

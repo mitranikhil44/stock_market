@@ -34,20 +34,19 @@ function SMA(values, period) {
 }
 
 function normalizeTimeLabel(ts) {
-  if (!ts) return '';
+  if (!ts) return "";
 
-  const [timePart, meridiemPart] = ts.trim().split(' '); 
-  const [hoursStr, minutesStr] = timePart?.split(':') ?? [];
+  const [timePart, meridiemPart] = ts.trim().split(" ");
+  const [hoursStr, minutesStr] = timePart?.split(":") ?? [];
 
   let hours = parseInt(hoursStr, 10);
-  const minutes = minutesStr ?? '00';
+  const minutes = minutesStr ?? "00";
 
-  const suffix = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12; 
+  const suffix = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
 
   return `${hours}:${minutes} ${suffix}`;
 }
-
 
 function compactNum(n) {
   if (n == null) return "";
@@ -336,10 +335,11 @@ export default function OptionMarketPrice() {
                     name="Price"
                     stroke="#60a5fa"
                     strokeWidth={2}
-                    dot={isSmall ? false : { r: 2.5 }}
-                    activeDot={{ r: 4 }}
+                    dot={false} // hide all static dots
+                    activeDot={{ r: 4 }} // show dot only on hover
                   />
                 )}
+
                 {showSMA5 && (
                   <Line
                     yAxisId="price"
@@ -348,9 +348,11 @@ export default function OptionMarketPrice() {
                     name="SMA-5"
                     stroke="#10b981"
                     strokeDasharray="4 3"
-                    dot={false}
+                    dot={false} // hide all static dots
+                    activeDot={{ r: 4 }} // show dot only on hover
                   />
                 )}
+
                 {showSMA20 && !isSmall && (
                   <Line
                     yAxisId="price"
@@ -359,9 +361,11 @@ export default function OptionMarketPrice() {
                     name="SMA-20"
                     stroke="#f59e0b"
                     strokeDasharray="5 4"
-                    dot={false}
+                    dot={false} // hide all static dots
+                    activeDot={{ r: 4 }} // show dot only on hover
                   />
                 )}
+
                 {showVolume && (
                   <Bar
                     yAxisId="vol"
