@@ -14,7 +14,8 @@ function parseNum(x) {
 }
 function toIN(n) {
   if (n == null || Number.isNaN(n)) return "-";
-  return n.toLocaleString("en-IN");
+  // keep decimals when present
+  return Number(n).toLocaleString("en-IN");
 }
 function signCls(n) {
   if (n == null) return "text-slate-300";
@@ -22,18 +23,9 @@ function signCls(n) {
   if (n < 0) return "text-rose-400";
   return "text-slate-300";
 }
-function kFormat(n) {
-  if (n == null) return "-";
-  const a = Math.abs(n);
-  if (a >= 1_00_00_000) return (n / 1_00_00_000).toFixed(4) + "Cr";
-  if (a >= 1_00_000) return (n / 1_00_000).toFixed(4) + "L";
-  if (a >= 1_000) return (n / 1_000).toFixed(4) + "k";
-  return toIN(n);
-}
 
 // Build array for one side (call|put)
 function buildRows(latest, prev, side) {
-  
   // side: 'call' or 'put'
   const out = [];
   const L = latest?.data ?? [];
@@ -98,7 +90,22 @@ function Pill({ children, className = "" }) {
   );
 }
 
-function RowTable({ title, rows, symbol, metric, emptyNote }) {
+function RowTable({ title, rows, symbol, metric, emptyNote, scaleDivisor, unitLabel }) {
+  const colCount = rows[0]?.side ? 8 : 7; // Strike, (Side), Now, Prev, Δ, Vol Δ, Rank Δ, Chart
+
+  const formatNow = (v) => {
+    if (v == null) return "-";
+    const scaled = v / scaleDivisor;
+    // show up to 2 decimals and use Indian grouping
+    return Number(scaled.toFixed(2)).toLocaleString("en-IN") + (unitLabel ? ` ${unitLabel}` : "");
+  };
+  const formatSigned = (v) => {
+    if (v == null) return "-";
+    const scaled = v / scaleDivisor;
+    const sign = v > 0 ? "+" : "";
+    return sign + Number(scaled.toFixed(2)).toLocaleString("en-IN") + (unitLabel ? ` ${unitLabel}` : "");
+  };
+
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-3">
       <div className="flex items-center justify-between mb-2">
@@ -124,9 +131,7 @@ function RowTable({ title, rows, symbol, metric, emptyNote }) {
             {rows.length ? (
               rows.map((r, i) => (
                 <tr key={i} className={`${i % 2 === 0 ? "bg-white/5" : ""}`}>
-                  <td className="py-2 pr-2 font-medium text-sky-300">
-                    {r.strike}
-                  </td>
+                  <td className="py-2 pr-2 font-medium text-sky-300">{r.strike}</td>
                   {r.side && (
                     <td className="px-2 text-left">
                       <span
@@ -138,19 +143,13 @@ function RowTable({ title, rows, symbol, metric, emptyNote }) {
                       </span>
                     </td>
                   )}
-                  <td className="px-2 text-right">{toIN(r.nowVal)}</td>
-                  <td className="px-2 text-right text-slate-300">
-                    {toIN(r.prevVal)}
-                  </td>
+                  <td className="px-2 text-right">{formatNow(r.nowVal)}</td>
+                  <td className="px-2 text-right text-slate-300">{formatNow(r.prevVal)}</td>
                   <td className={`px-2 text-right ${signCls(r.delta)}`}>
-                    {r.delta == null
-                      ? "-"
-                      : (r.delta > 0 ? "+" : "") + toIN(r.delta)}
+                    {r.delta == null ? "-" : formatSigned(r.delta)}
                   </td>
                   <td className={`px-2 text-right ${signCls(r.volDelta)}`}>
-                    {r.volDelta == null
-                      ? "-"
-                      : (r.volDelta > 0 ? "+" : "") + toIN(r.volDelta)}
+                    {r.volDelta == null ? "-" : formatSigned(r.volDelta)}
                   </td>
                   <td className={`px-2 text-right ${signCls(r.rankDelta)}`}>
                     {r.rankDelta == null
@@ -173,7 +172,7 @@ function RowTable({ title, rows, symbol, metric, emptyNote }) {
               ))
             ) : (
               <tr>
-                <td className="py-3 text-center text-slate-400" colSpan="7">
+                <td className="py-3 text-center text-slate-400" colSpan={colCount}>
                   {emptyNote}
                 </td>
               </tr>
@@ -199,7 +198,18 @@ export default function OptionFlowShift({
   topN = 8,
   minAbsChange = 1000,
 }) {
-  const [side, setSide] = useState("both"); // 'both' | 'call' | 'put'  
+  const [side, setSide] = useState("both"); // 'both' | 'call' | 'put'
+
+  // scale options and default divisor
+  const SCALE_OPTIONS = [
+    { key: "none", label: "None", divisor: 1, unit: "" },
+    { key: "thousand", label: "Thousands", divisor: 1_000, unit: "K" },
+    { key: "lakh", label: "Lakhs", divisor: 100_000, unit: "L" },
+    { key: "million", label: "Millions", divisor: 1_000_000, unit: "M" },
+    { key: "crore", label: "Crores", divisor: 10_000_000, unit: "Cr" },
+  ];
+  const defaultScale = SCALE_OPTIONS[3]; 
+  const [scale, setScale] = useState(defaultScale);
 
   const built = useMemo(() => {
     const C = buildRows(latestSnapshot, prevSnapshot, "call");
@@ -328,8 +338,7 @@ export default function OptionFlowShift({
       };
     }
     // both: just merge and sort by abs delta
-    const mergeSort = (a, b) =>
-      Math.abs(b?.delta ?? 0) - Math.abs(a?.delta ?? 0);
+    const mergeSort = (a, b) => Math.abs(b?.delta ?? 0) - Math.abs(a?.delta ?? 0);
     const inflow = [...built.inflowC, ...built.inflowP]
       .sort(mergeSort)
       .slice(0, topN);
@@ -352,7 +361,7 @@ export default function OptionFlowShift({
       volUp,
       rankUp,
       rankDown,
-      metricForLink: "call-oi", // link column label uses metric-specific on row click anyway
+      metricForLink: "call-oi",
       metricVolLink: "call-vol",
     };
   }, [built, side, topN]);
@@ -362,12 +371,8 @@ export default function OptionFlowShift({
       {/* header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">
-            Flow / Shift Analysis (Prev → Latest)
-          </h3>
-          <p className="text-xs text-slate-400">
-            Detect where OI/Volume is shifting between last two snapshots.
-          </p>
+          <h3 className="text-lg font-semibold">Flow / Shift Analysis (Prev → Latest)</h3>
+          <p className="text-xs text-slate-400">Detect where OI/Volume is shifting between last two snapshots.</p>
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-slate-300">Side</label>
@@ -380,6 +385,20 @@ export default function OptionFlowShift({
             <option value="call">Calls</option>
             <option value="put">Puts</option>
           </select>
+
+          <label className="text-xs text-slate-300">Scale</label>
+          <select
+            className="text-xs bg-white text-slate-900 border rounded-lg px-2 py-1"
+            value={scale.key}
+            onChange={(e) => {
+              const s = SCALE_OPTIONS.find((o) => o.key === e.target.value);
+              if (s) setScale(s);
+            }}
+          >
+            {SCALE_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -387,38 +406,26 @@ export default function OptionFlowShift({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
           <div className="text-[11px] text-slate-400">Net Call OI Δ</div>
-          <div
-            className={`text-sm font-semibold ${signCls(built.nets.netCallOI)}`}
-          >
-            {(built.nets.netCallOI > 0 ? "+" : "") + kFormat(built.nets.netCallOI)}
+          <div className={`text-sm font-semibold ${signCls(built.nets.netCallOI)}`}>
+            {(built.nets.netCallOI > 0 ? "+" : "") + (built.nets.netCallOI == null ? "-" : Number((built.nets.netCallOI / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
           </div>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
           <div className="text-[11px] text-slate-400">Net Put OI Δ</div>
-          <div
-            className={`text-sm font-semibold ${signCls(built.nets.netPutOI)}`}
-          >
-            {(built.nets.netPutOI > 0 ? "+" : "") + kFormat(built.nets.netPutOI)}
+          <div className={`text-sm font-semibold ${signCls(built.nets.netPutOI)}`}>
+            {(built.nets.netPutOI > 0 ? "+" : "") + (built.nets.netPutOI == null ? "-" : Number((built.nets.netPutOI / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
           </div>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
           <div className="text-[11px] text-slate-400">Net Call Vol Δ</div>
-          <div
-            className={`text-sm font-semibold ${signCls(
-              built.nets.netCallVol
-            )}`}
-          >
-            {(built.nets.netCallVol > 0 ? "+" : "") +
-              kFormat(built.nets.netCallVol)}
+          <div className={`text-sm font-semibold ${signCls(built.nets.netCallVol)}`}>
+            {(built.nets.netCallVol > 0 ? "+" : "") + (built.nets.netCallVol == null ? "-" : Number((built.nets.netCallVol / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
           </div>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
           <div className="text-[11px] text-slate-400">Net Put Vol Δ</div>
-          <div
-            className={`text-sm font-semibold ${signCls(built.nets.netPutVol)}`}
-          >
-            {(built.nets.netPutVol > 0 ? "+" : "") +
-              kFormat(built.nets.netPutVol)}
+          <div className={`text-sm font-semibold ${signCls(built.nets.netPutVol)}`}>
+            {(built.nets.netPutVol > 0 ? "+" : "") + (built.nets.netPutVol == null ? "-" : Number((built.nets.netPutVol / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
           </div>
         </div>
       </div>
@@ -437,6 +444,8 @@ export default function OptionFlowShift({
           symbol={symbol}
           metric={side === "put" ? "put-oi" : "call-oi"}
           emptyNote="No significant inflow."
+          scaleDivisor={scale.divisor}
+          unitLabel={scale.unit}
         />
         <RowTable
           title={
@@ -450,6 +459,8 @@ export default function OptionFlowShift({
           symbol={symbol}
           metric={side === "put" ? "put-oi" : "call-oi"}
           emptyNote="No significant outflow."
+          scaleDivisor={scale.divisor}
+          unitLabel={scale.unit}
         />
       </div>
 
@@ -467,6 +478,8 @@ export default function OptionFlowShift({
           symbol={symbol}
           metric={side === "put" ? "put-vol" : "call-vol"}
           emptyNote="No significant volume spike."
+          scaleDivisor={scale.divisor}
+          unitLabel={scale.unit}
         />
         <div className="space-y-3">
           <RowTable
@@ -475,6 +488,8 @@ export default function OptionFlowShift({
             symbol={symbol}
             metric={side === "put" ? "put-oi" : "call-oi"}
             emptyNote="No big rank upgrades."
+            scaleDivisor={scale.divisor}
+            unitLabel={scale.unit}
           />
           <RowTable
             title="Rank Movers ↓ (by OI Rank)"
@@ -482,6 +497,8 @@ export default function OptionFlowShift({
             symbol={symbol}
             metric={side === "put" ? "put-oi" : "call-oi"}
             emptyNote="No big rank drops."
+            scaleDivisor={scale.divisor}
+            unitLabel={scale.unit}
           />
         </div>
       </div>
@@ -490,8 +507,7 @@ export default function OptionFlowShift({
       <div className="text-[11px] text-slate-400">
         <span className="mr-2">Δ = change (Latest − Previous). </span>
         <span className="mr-2">
-          <span className="text-emerald-400">Green</span> = increase,{" "}
-          <span className="text-rose-400">Red</span> = decrease.
+          <span className="text-emerald-400">Green</span> = increase, <span className="text-rose-400">Red</span> = decrease.
         </span>
         <span>Rank Δ +ve ⇒ strike moved up in OI ranking (more interest).</span>
       </div>

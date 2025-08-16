@@ -25,8 +25,6 @@ export default function PCRDiffChart({ data }) {
     return n.toLocaleString();
   }
 
-  const SCALE_DIVISOR = 100000;
-
   // Prepare chart data with safe PCR calculation
   const chartData = (data || []).map((d) => {
     const totalCallOI = d.totalCallOI || 0;
@@ -36,10 +34,10 @@ export default function PCRDiffChart({ data }) {
 
     return {
       time: d.timestamp,
-      totalCallOI: totalCallOI / SCALE_DIVISOR,
-      totalPutOI: totalPutOI / SCALE_DIVISOR,
-      totalCallVol: totalCallVol / SCALE_DIVISOR,
-      totalPutVol: totalPutVol / SCALE_DIVISOR,
+      totalCallOI: totalCallOI,
+      totalPutOI: totalPutOI,
+      totalCallVol: totalCallVol,
+      totalPutVol: totalPutVol,
       chgOI: totalPutOI - totalCallOI,
       chgVol: totalPutVol - totalCallVol,
       pcr: totalCallOI > 0 ? totalPutOI / totalCallOI : 0,

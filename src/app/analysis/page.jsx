@@ -13,6 +13,8 @@ const symbolToIndex = {
   midcap_nifty_50: "midcap_nifty_50",
 };
 
+const SCALE_DIVISOR = 1000000;
+
 function calculateTimewisePCR(snapshots) {
   const cleanNum = (val) => {
     if (typeof val !== "string") return 0;
@@ -27,10 +29,10 @@ function calculateTimewisePCR(snapshots) {
     let totalPutVol = 0;
 
     snap.data?.forEach((row) => {
-      totalCallOI += cleanNum(row.CallOI);
-      totalPutOI += cleanNum(row.PutOI);
-      totalCallVol += cleanNum(row.CallVol);
-      totalPutVol += cleanNum(row.PutVol);
+      totalCallOI += cleanNum(row.CallOI) / SCALE_DIVISOR;
+      totalPutOI += cleanNum(row.PutOI) / SCALE_DIVISOR;
+      totalCallVol += cleanNum(row.CallVol) / SCALE_DIVISOR;
+      totalPutVol += cleanNum(row.PutVol) / SCALE_DIVISOR;
     });
 
     const pcrOI = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
@@ -92,10 +94,11 @@ const analysis = () => {
     };
   }, [symbol]);
 
+  const timewiseData = calculateTimewisePCR(snapshots);
+
   const latest = snapshots[snapshots.length - 1] || null;
   const prev = snapshots[1] || null;
 
-  const timewiseData = calculateTimewisePCR(snapshots);
 
   return (
     <>

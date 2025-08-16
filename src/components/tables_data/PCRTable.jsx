@@ -7,9 +7,9 @@ export default function PCRTable({ data }) {
   function kFormat(n) {
     if (n == null) return "-";
     const a = Math.abs(n);
-    if (a >= 1_00_00_000) return (n / 1_00_00_000).toFixed(4) + "Cr";
-    if (a >= 1_00_000) return (n / 1_00_000).toFixed(4) + "L";
-    if (a >= 1_000) return (n / 1_000).toFixed(4) + "k";
+    if (a >= 1_00_00_000) return (n / 1_00_00_000).toFixed(1) + "Cr";
+    if (a >= 1_00_000) return (n / 1_00_000).toFixed(1) + "L";
+    if (a >= 1_000) return (n / 1_000).toFixed(1) + "k";
     return n.toLocaleString();
   }
 
