@@ -44,7 +44,6 @@ export default function PCRDiffChart({ data }) {
     };
   });
 
-  // Dynamic keys
   let line1Key, line2Key, line1Name, line2Name;
   if (chartMode === "OI") {
     line1Key = "totalCallOI";

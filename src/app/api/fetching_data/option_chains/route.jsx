@@ -3,14 +3,13 @@ import { connectToMongo } from "@/lib/mongodb";
 import { isIndianMarketOpen } from "@/components/functions/check_marketing_hour";
 
 // models
-import NiftyOptionChainData       from "@/models/Nifty_50_Option_Chain_Data";
-import BankNiftyOptionChainData   from "@/models/Bank_Nifty_Option_Chain_Data";
-import FinNiftyOptionChainData    from "@/models/Fin_Nifty_Option_Chain_Data";
+import NiftyOptionChainData from "@/models/Nifty_50_Option_Chain_Data";
+import BankNiftyOptionChainData from "@/models/Bank_Nifty_Option_Chain_Data";
+import FinNiftyOptionChainData from "@/models/Fin_Nifty_Option_Chain_Data";
 import MidcapNiftyOptionChainData from "@/models/Midcap_Nifty_50_Option_Chain_Data";
 
 // scraper fn
-import get_option_chain_data      from "@/components/functions/get_option_chain_data";
-import CheckAndUpdateExpiryDate   from "@/components/CheckAndUpdateExpiryDate";
+import get_option_chain_data from "@/components/functions/get_option_chain_data";
 
 export const runtime = "nodejs";
 export const revalidate = 0;
@@ -29,30 +28,22 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Market is closed" });
     }
 
-    console.log("Checking and updating expiry dates...");
-    await Promise.all([
-      CheckAndUpdateExpiryDate("NIFTY"),
-      CheckAndUpdateExpiryDate("BANKNIFTY"),
-      CheckAndUpdateExpiryDate("FINNIFTY"),
-      CheckAndUpdateExpiryDate("MIDCPNIFTY"),
-    ]);
-    console.log("Expiry dates checked/updated ✅");
-
-    console.log("Fetching option chain data...");
+    console.log("Fetching & saving option chain data...");
     const [nifty, bank, fin, midcap] = await Promise.all([
-      get_option_chain_data("NIFTY",    NiftyOptionChainData),
-      get_option_chain_data("BANKNIFTY",BankNiftyOptionChainData),
+      get_option_chain_data("NIFTY", NiftyOptionChainData),
+      get_option_chain_data("BANKNIFTY", BankNiftyOptionChainData),
       get_option_chain_data("FINNIFTY", FinNiftyOptionChainData),
-      get_option_chain_data("MIDCPNIFTY",MidcapNiftyOptionChainData),
+      get_option_chain_data("MIDCPNIFTY", MidcapNiftyOptionChainData),
     ]);
-    console.log("Fetched all option chain data ✅");
+    console.log("Fetched & saved all option chain data ✅");
 
     return NextResponse.json({
       success: true,
-      results: {
-        nifty_50:      !!nifty,
-        bank_nifty:    !!bank,
-        fin_nifty:     !!fin,
+      message: "Option chain data fetched & saved successfully",
+      saved: {
+        nifty_50: !!nifty,
+        bank_nifty: !!bank,
+        fin_nifty: !!fin,
         midcap_nifty_50: !!midcap,
       },
     });
