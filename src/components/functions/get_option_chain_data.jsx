@@ -1,15 +1,24 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import ExpiryDateModel from "@/models/Expiry_Date";
-import updated_expiry_date from "./updated_expiry_date";
 
 // Function to fetch Option Chain data
 export default async (indexUrl, indexDatabase) => {
   try {
+    // 🔹 Find the latest expiry date from dropdown
+    const newExpiry = $("#sel_exp_date option").first().attr("value");
+    
+    // 🔹 Check expiry mismatch
+    const isUpdated = expiryData?.expiryDate !== newExpiry;
+
     // 🔹 Get expiry from DB or scrape it
     let expiryData = await ExpiryDateModel.findOne({ indexName: indexUrl });
     if (!expiryData) {
-      expiryData = { expiryDate: await updated_expiry_date(indexUrl) };
+      await ExpiryDateModel.findOneAndUpdate(
+        { indexName: indexUrl },
+        { expiryDate: newExpiry, lastUpdated: new Date() },
+        { upsert: true }
+      );
     }
 
     // 🔹 Fetch page using expiry from DB
@@ -25,11 +34,6 @@ export default async (indexUrl, indexDatabase) => {
 
     const $ = cheerio.load(result.data);
 
-    // 🔹 Find the latest expiry date from dropdown
-    const newExpiry = $("#sel_exp_date option").first().attr("value");
-
-    // 🔹 Check expiry mismatch
-    const isUpdated = expiryData?.expiryDate !== newExpiry;
 
     if (isUpdated) {
       // Update expiry in DB but skip saving option chain this time
