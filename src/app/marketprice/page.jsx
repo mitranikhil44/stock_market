@@ -147,98 +147,102 @@ function MarketChart({ symbol, title }) {
     return () => (mounted = false);
   }, [symbol, period]);
 
- const data = useMemo(() => {
-  if (!raw?.length) return [];
-  const mapped = raw
-    .map((d) => ({
-      time: normalizeTimeLabel(d.timestamp),
-      price: Number(d.price),
-      volume: Number(d.volume),
-      high: Number(d.high),   // ✅ add high
-      low: Number(d.low),     // ✅ add low
-      close: Number(d.close), // ✅ add close
-    }))
-    .filter((r) => Number.isFinite(r.price));
+  const data = useMemo(() => {
+    if (!raw?.length) return [];
+    const mapped = raw
+      .map((d) => ({
+        time: normalizeTimeLabel(d.timestamp),
+        price: Number(d.price),
+        volume: Number(d.volume),
+        high: Number(d.high),
+        low: Number(d.low),
+        close: Number(d.close),
+      }))
+      .filter((r) => Number.isFinite(r.price));
 
-  const prices = mapped.map((m) => m.price);
-  const sma5 = SMA(prices, 5);
-  const sma20 = SMA(prices, 20);
-  const ema10 = EMA(prices, 10);
-  const rsi = RSI(prices, 14);
-  const { macdLine, signalLine } = MACD(prices);
+    const prices = mapped.map((m) => m.price);
+    const sma5 = SMA(prices, 5);
+    const sma20 = SMA(prices, 20);
+    const ema10 = EMA(prices, 10);
+    const rsi = RSI(prices, 14);
+    const { macdLine, signalLine } = MACD(prices);
+    const supertrend = calculateSuperTrend(mapped);
 
-  // ✅ calculate supertrend only once here
-  const st = calculateSuperTrend(mapped);
+    let enriched = mapped.map((row, i) => ({
+      ...row,
+      sma5: sma5[i],
+      sma20: sma20[i],
+      ema10: ema10[i],
+      rsi: rsi[i],
+      macd: macdLine[i],
+      signal: signalLine[i],
+      supertrend: supertrend[i],
+    }));
 
-  return mapped.map((row, i) => ({
-    ...row,
-    sma5: sma5[i],
-    sma20: sma20[i],
-    ema10: ema10[i],
-    rsi: rsi[i],
-    macd: macdLine[i],
-    signal: signalLine[i],
-    supertrend: st[i],  // ✅ merge here
-  }));
-}, [raw]);
-
-  // ✅ SuperTrend Calculation
-function calculateSuperTrend(data, period = 10, multiplier = 3) {
-  if (!data || data.length < period) return [];
-
-  let atr = [];
-  let supertrend = [];
-  let hl2 = data.map((d) => (d.high + d.low) / 2);
-
-  // ATR Calculation
-  for (let i = 1; i < data.length; i++) {
-    let tr = Math.max(
-      data[i].high - data[i].low,
-      Math.abs(data[i].high - data[i - 1].close),
-      Math.abs(data[i].low - data[i - 1].close)
-    );
-    atr.push(tr);
-  }
-
-  // Smoothed ATR
-  let atrAvg = [];
-  for (let i = 0; i < atr.length; i++) {
-    if (i < period) {
-      atrAvg.push(null);
-    } else {
-      let slice = atr.slice(i - period, i);
-      atrAvg.push(slice.reduce((a, b) => a + b, 0) / period);
-    }
-  }
-
-  // SuperTrend Bands
-  for (let i = 0; i < data.length; i++) {
-    if (atrAvg[i] == null) {
-      supertrend.push(null);
-      continue;
+    // ✅ Prediction line (1 step future based on SMA5 last value)
+    const lastSMA = sma5[sma5.length - 1];
+    if (lastSMA) {
+      enriched.push({
+        time: "Prediction",
+        price: null,
+        sma5: lastSMA,
+        sma20: null,
+        ema10: null,
+        rsi: null,
+        macd: null,
+        signal: null,
+        supertrend: null,
+        prediction: lastSMA,
+      });
     }
 
-    let upperBand = hl2[i] + multiplier * atrAvg[i];
-    let lowerBand = hl2[i] - multiplier * atrAvg[i];
+    return enriched;
+  }, [raw]);
 
-    let prevST = supertrend[i - 1] || hl2[i];
+  // ✅ SuperTrend Calculation (fixed)
+  function calculateSuperTrend(data, period = 10, multiplier = 3) {
+    if (!data || data.length < period) return [];
 
-    if (data[i].close > prevST) {
-      supertrend.push(lowerBand);
-    } else {
-      supertrend.push(upperBand);
+    let atr = new Array(data.length).fill(null);
+    let supertrend = new Array(data.length).fill(null);
+    let hl2 = data.map((d) => (d.high + d.low) / 2);
+
+    // ATR Calculation
+    for (let i = 1; i < data.length; i++) {
+      let tr = Math.max(
+        data[i].high - data[i].low,
+        Math.abs(data[i].high - data[i - 1].close),
+        Math.abs(data[i].low - data[i - 1].close)
+      );
+      atr[i] = tr;
     }
+
+    // Smoothed ATR
+    let atrAvg = new Array(data.length).fill(null);
+    for (let i = period; i < data.length; i++) {
+      let slice = atr.slice(i - period + 1, i + 1).filter((x) => x != null);
+      atrAvg[i] = slice.reduce((a, b) => a + b, 0) / slice.length;
+    }
+
+    // SuperTrend Bands
+    for (let i = period; i < data.length; i++) {
+      let upperBand = hl2[i] + multiplier * atrAvg[i];
+      let lowerBand = hl2[i] - multiplier * atrAvg[i];
+
+      if (i === period) {
+        supertrend[i] = hl2[i];
+      } else {
+        let prevST = supertrend[i - 1];
+        if (data[i].close > prevST) {
+          supertrend[i] = lowerBand;
+        } else {
+          supertrend[i] = upperBand;
+        }
+      }
+    }
+
+    return supertrend;
   }
-
-  return supertrend;
-}
-
-// ✅ Merge into data before rendering
-const enrichedData = data.map((d, i) => ({
-  ...d,
-  supertrend: calculateSuperTrend(data)[i], // add supertrend line
-}));
-
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl shadow-md p-4 my-6">
@@ -290,6 +294,13 @@ const enrichedData = data.map((d, i) => ({
                     dot={false}
                   />
                 )}
+                <Line
+                  dataKey="prediction"
+                  name="Prediction (SMA)"
+                  stroke="#22c55e"
+                  strokeDasharray="5 5"
+                  dot={true}
+                />
                 {analysis.includes("SMA20") && (
                   <Line
                     dataKey="sma20"

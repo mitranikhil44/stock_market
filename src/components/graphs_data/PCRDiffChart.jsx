@@ -13,9 +13,8 @@ import {
 } from "recharts";
 
 export default function PCRDiffChart({ data }) {
-  const [chartMode, setChartMode] = useState("PCR"); // Default to PCR
+  const [chartMode, setChartMode] = useState("PCR"); // Default
 
-  // Number formatting
   function kFormat(n) {
     if (n == null) return "-";
     const a = Math.abs(n);
@@ -25,7 +24,6 @@ export default function PCRDiffChart({ data }) {
     return n.toLocaleString();
   }
 
-  // Prepare chart data with safe PCR calculation
   const chartData = (data || []).map((d) => {
     const totalCallOI = d.totalCallOI || 0;
     const totalPutOI = d.totalPutOI || 0;
@@ -34,10 +32,10 @@ export default function PCRDiffChart({ data }) {
 
     return {
       time: d.timestamp,
-      totalCallOI: totalCallOI,
-      totalPutOI: totalPutOI,
-      totalCallVol: totalCallVol,
-      totalPutVol: totalPutVol,
+      totalCallOI,
+      totalPutOI,
+      totalCallVol,
+      totalPutVol,
       chgOI: totalPutOI - totalCallOI,
       chgVol: totalPutVol - totalCallVol,
       pcr: totalCallOI > 0 ? totalPutOI / totalCallOI : 0,
@@ -60,20 +58,20 @@ export default function PCRDiffChart({ data }) {
     line1Name = "Put OI - Call OI";
   } else if (chartMode === "Chg Volume") {
     line1Key = "chgVol";
-    line1Name = "Put Volume - Call Volume";
+    line1Name = "Put Vol - Call Vol";
   } else if (chartMode === "PCR") {
     line1Key = "pcr";
     line1Name = "Put/Call Ratio";
   }
 
   return (
-    <div className="shadow-lg rounded-2xl p-4 sm:p-6 mt-6 bg-white text-gray-700">
-      {/* Dropdown Selector */}
-      <div className="mb-4">
+    <div className="glass-card mt-6 p-4 sm:p-6">
+      {/* Selector */}
+      <div className="mb-4 flex justify-end">
         <select
           value={chartMode}
           onChange={(e) => setChartMode(e.target.value)}
-          className="px-4 py-2 border rounded-lg border-gray-600 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 rounded-lg bg-gray-900/60 border border-gray-700 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="PCR">PCR</option>
           <option value="OI">OI</option>
@@ -89,27 +87,35 @@ export default function PCRDiffChart({ data }) {
           data={chartData}
           margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
           <XAxis
             dataKey="time"
-            tick={{ fontSize: 12, fill: "#000" }}
+            tick={{ fontSize: 12, fill: "#9CA3AF" }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
             tickFormatter={kFormat}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 12, fill: "#9CA3AF" }}
             tickLine={false}
             axisLine={false}
           />
-          <Tooltip formatter={(value) => kFormat(value)} />
-          <Legend verticalAlign="top" height={36} iconType="circle" />
+          <Tooltip
+            contentStyle={{ backgroundColor: "#111827", border: "1px solid #374151", color: "#fff" }}
+            formatter={(value) => kFormat(value)}
+          />
+          <Legend
+            verticalAlign="top"
+            height={36}
+            iconType="circle"
+            wrapperStyle={{ color: "#D1D5DB" }}
+          />
 
           {/* Lines */}
           <Line
             type="monotone"
             dataKey={line1Key}
-            stroke="#3b82f6"
+            stroke="#60A5FA"
             strokeWidth={2}
             name={line1Name}
             dot={false}
@@ -118,7 +124,7 @@ export default function PCRDiffChart({ data }) {
             <Line
               type="monotone"
               dataKey={line2Key}
-              stroke="#f59e0b"
+              stroke="#FBBF24"
               strokeWidth={2}
               name={line2Name}
               dot={false}

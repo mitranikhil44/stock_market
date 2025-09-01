@@ -5,25 +5,12 @@ import ExpiryDateModel from "@/models/Expiry_Date";
 // Function to fetch Option Chain data
 export default async (indexUrl, indexDatabase) => {
   try {
-    // 🔹 Find the latest expiry date from dropdown
-    const newExpiry = $("#sel_exp_date option").first().attr("value");
-    
-    // 🔹 Check expiry mismatch
-    const isUpdated = expiryData?.expiryDate !== newExpiry;
-
-    // 🔹 Get expiry from DB or scrape it
+    // 🔹 First, get expiry from DB
     let expiryData = await ExpiryDateModel.findOne({ indexName: indexUrl });
-    if (!expiryData) {
-      await ExpiryDateModel.findOneAndUpdate(
-        { indexName: indexUrl },
-        { expiryDate: newExpiry, lastUpdated: new Date() },
-        { upsert: true }
-      );
-    }
 
-    // 🔹 Fetch page using expiry from DB
+    // 🔹 Fetch page using expiry from DB (fallback: use latest expiry if not found yet)
     const result = await axios.get(
-      `https://www.moneycontrol.com/indices/fno/view-option-chain/${indexUrl}/${expiryData.expiryDate}`,
+      `https://www.moneycontrol.com/indices/fno/view-option-chain/${indexUrl}/${expiryData?.expiryDate || ""}`,
       {
         headers: {
           "User-Agent": "Mozilla/5.0",
@@ -34,6 +21,20 @@ export default async (indexUrl, indexDatabase) => {
 
     const $ = cheerio.load(result.data);
 
+    // 🔹 Find the latest expiry date from dropdown
+    const newExpiry = $("#sel_exp_date option").first().attr("value");
+
+    // 🔹 If no expiry in DB → insert new one
+    if (!expiryData) {
+      expiryData = await ExpiryDateModel.findOneAndUpdate(
+        { indexName: indexUrl },
+        { expiryDate: newExpiry, lastUpdated: new Date() },
+        { upsert: true, new: true }
+      );
+    }
+
+    // 🔹 Check expiry mismatch
+    const isUpdated = expiryData.expiryDate !== newExpiry;
 
     if (isUpdated) {
       // Update expiry in DB but skip saving option chain this time
