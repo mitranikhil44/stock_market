@@ -24,7 +24,7 @@ const checkPasswordStrength = (password) => {
   return { strength, hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar };
 };
 
-const SignupPage = () => {
+const Register = () => {
   const [loading, setLoading] = useState(false)
   const [userInfo, setUserInfo] = useState({
     name: "",
@@ -471,4 +471,4 @@ const SignupPage = () => {
   );
 };
 
-export default SignupPage;
+export default Register;

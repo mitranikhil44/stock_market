@@ -14,11 +14,9 @@ const symbolToIndex = {
 };
 
 const SCALE_DIVISOR = 1000000;
-const TIME_OPTIONS = [
-  { label: "1 Day", value: "1d" },
-  { label: "5 Days", value: "5d" },
-  { label: "1 Month", value: "1mo" },
-];
+
+// 🔹 Lookback options (minutes)
+const LOOKBACK_OPTIONS = [1, 3, 5, 15, 30, 45, 60];
 
 // 🔹 Calculate timewise PCR/OI/Vol
 function calculateTimewisePCR(snapshots) {
@@ -56,17 +54,21 @@ function calculateTimewisePCR(snapshots) {
   });
 }
 
-// 🔹 Prediction logic
-function getPredictionTrend(timewiseData, opts = {}) {
-  const { oiPctThreshold = 0.01, pcrThreshold = 0.02, useVolume = true } = opts;
+// 🔹 Prediction logic (now uses dynamic lookback)
+function getPredictionTrend(timewiseData, lookback, opts = {}) {
+  const {
+    oiPctThreshold = 0.005, // 🔹 thoda relax kiya
+    pcrThreshold = 0.01, // 🔹 thoda relax kiya
+    useVolume = true,
+  } = opts;
   const eps = 1e-9;
 
-  if (!timewiseData || timewiseData.length < 2) {
+  if (!timewiseData || timewiseData.length <= lookback) {
     return { label: "Insufficient Data", score: 0, confidence: 0, reasons: [] };
   }
 
   const last = timewiseData[timewiseData.length - 1];
-  const prev = timewiseData[timewiseData.length - 2];
+  const prev = timewiseData[timewiseData.length - 1 - lookback];
 
   const callOIChange = last.totalCallOI - prev.totalCallOI;
   const putOIChange = last.totalPutOI - prev.totalPutOI;
@@ -85,19 +87,32 @@ function getPredictionTrend(timewiseData, opts = {}) {
     reasons.push("Call OI ↑ & Put OI ↓");
   }
 
+  // PCR weighting
   if (pcrChange > pcrThreshold) {
-    score += 1;
-    reasons.push("PCR ↑");
+    if (pcrChange > 0.05) {
+      score += 2; // Strong Put dominance
+      reasons.push(`PCR Strong ↑ (${pcrChange.toFixed(2)})`);
+    } else {
+      score += 1; // Mild Put dominance
+      reasons.push(`PCR Mild ↑ (${pcrChange.toFixed(2)})`);
+    }
   } else if (pcrChange < -pcrThreshold) {
-    score -= 1;
-    reasons.push("PCR ↓");
+    if (pcrChange < -0.05) {
+      score -= 2; // Strong Call dominance
+      reasons.push(`PCR Strong ↓ (${pcrChange.toFixed(2)})`);
+    } else {
+      score -= 1; // Mild Call dominance
+      reasons.push(`PCR Mild ↓ (${pcrChange.toFixed(2)})`);
+    }
   }
 
   if (useVolume) {
     const callVolPct =
-      (last.totalCallVol - prev.totalCallVol) / (Math.abs(prev.totalCallVol) + eps);
+      (last.totalCallVol - prev.totalCallVol) /
+      (Math.abs(prev.totalCallVol) + eps);
     const putVolPct =
-      (last.totalPutVol - prev.totalPutVol) / (Math.abs(prev.totalPutVol) + eps);
+      (last.totalPutVol - prev.totalPutVol) /
+      (Math.abs(prev.totalPutVol) + eps);
 
     if (putVolPct > oiPctThreshold && callVolPct < -oiPctThreshold) {
       score += 1;
@@ -108,22 +123,32 @@ function getPredictionTrend(timewiseData, opts = {}) {
     }
   }
 
-  const maxScore = 4;
-  const absScore = Math.abs(score);
+  // 🔹 Label decide karna
   let label = "Neutral / Range";
   if (score >= 2) label = "Bullish Bias 📈";
   else if (score <= -2) label = "Bearish Bias 📉";
 
-  const confidence = Math.min(100, Math.round((absScore / maxScore) * 100));
+  // 🔹 Confidence ko aur smooth kiya
+  let confidence = 0;
+  if (score === 0) confidence = 0;
+  else if (Math.abs(score) === 1) confidence = 40;
+  else if (Math.abs(score) === 2) confidence = 65;
+  else if (Math.abs(score) >= 3) confidence = 90;
 
-  return { label, score, confidence, reasons, details: { callOI_pct, putOI_pct, pcrChange } };
+  return {
+    label,
+    score,
+    confidence,
+    reasons,
+    details: { callOI_pct, putOI_pct, pcrChange },
+  };
 }
 
 const Analysis = () => {
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [symbol, setSymbol] = useState("nifty_50");
-  const [timeframe, setTimeframe] = useState("1d");
+  const [lookback, setLookback] = useState(1); // default = 1 min
   const [error, setError] = useState("");
   const [spot, setSpot] = useState(null);
 
@@ -135,18 +160,19 @@ const Analysis = () => {
         setError("");
 
         const oc = await axios.get(
-          `/api/market_data/option_chain?symbol=${symbol}&sort=asc&period=${timeframe}`
+          `/api/market_data/option_chain?symbol=${symbol}&sort=asc&period=1d`
         );
         const arr = oc.data?.data || [];
         if (mounted) setSnapshots(arr);
 
         const priceIndex = symbolToIndex[symbol] || symbol;
         const mp = await axios.get(
-          `/api/market_data/price?symbol=${priceIndex}&period=${timeframe}`
+          `/api/market_data/price?symbol=${priceIndex}&period=1d`
         );
         const seriesRaw = mp.data?.data || {};
         const allSeries = Object.values(seriesRaw).flat();
-        const lastItem = allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
+        const lastItem =
+          allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
         if (mounted) setSpot(lastItem ? Number(lastItem.price) : null);
       } catch (e) {
         console.error(e);
@@ -155,14 +181,17 @@ const Analysis = () => {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
-  }, [symbol, timeframe]);
+    return () => {
+      mounted = false;
+    };
+  }, [symbol]);
 
   const timewiseData = calculateTimewisePCR(snapshots);
-  const prediction = getPredictionTrend(timewiseData);
+  const prediction = getPredictionTrend(timewiseData, lookback);
 
   const latest = snapshots[snapshots.length - 1] || null;
-  const prev = snapshots[1] || null;
+  const prevIndex = Math.max(0, snapshots.length - 1 - lookback);
+  const prev = snapshots[prevIndex] || null;
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
@@ -179,16 +208,6 @@ const Analysis = () => {
             <option value="nifty_50">Nifty 50</option>
             <option value="fin_nifty">Fin Nifty</option>
             <option value="midcap_nifty_50">Midcap 50</option>
-          </select>
-
-          <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
-            className="glass-card px-3 py-2 text-sm bg-transparent text-foreground"
-          >
-            {TIME_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
           </select>
         </div>
       </div>
@@ -210,6 +229,26 @@ const Analysis = () => {
                 <PCRDiffChart data={timewiseData} />
               </div>
 
+              {/* 🔹 Lookback Selector */}
+              <div className="mb-6">
+                <div className="inline-flex rounded-2xl bg-gray-100 p-1 shadow-inner">
+                  {LOOKBACK_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => setLookback(opt)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
+          ${
+            lookback === opt
+              ? "bg-blue-600 text-white shadow-md"
+              : "text-gray-700 hover:bg-gray-200"
+          }`}
+                    >
+                      {opt}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* 🔹 Prediction Card */}
               <div
                 className={`glass-card p-5 mt-4 ${
@@ -229,7 +268,7 @@ const Analysis = () => {
                     : "No strong signals"}
                 </div>
                 <p className="text-sm text-gray-500 mt-2">
-                  Based on OI + Volume + PCR shifts
+                  Based on OI + Volume + PCR shifts (Lookback {lookback}m)
                 </p>
               </div>
             </>

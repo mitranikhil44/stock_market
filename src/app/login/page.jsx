@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { HiEye } from "react-icons/hi";
-import Navbar from "@/components/Navbar";
 import { HiEyeSlash } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/utils/auth";
@@ -24,7 +23,7 @@ const checkPasswordStrength = (password) => {
     return { strength, hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar };
 };
 
-const SigninPage = () => {
+const Login = () => {
   const [loading, setLoading] = useState(false);
   const [userInfo, setUserInfo] = useState({
     name: "",
@@ -110,7 +109,6 @@ const SigninPage = () => {
 
   return (
     <>
-      <Navbar />
       <section className="relative z-10 overflow-hidden p-[2%] mt-[5rem]">
         <div className="container">
           <div className="-mx-4 flex flex-wrap">
@@ -445,4 +443,4 @@ const SigninPage = () => {
   );
 };
 
-export default SigninPage;
+export default Login;
