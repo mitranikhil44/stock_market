@@ -12,37 +12,54 @@ function parseNum(x) {
   const m = cleaned.match(/^-?\d+(\.\d+)?/);
   return m ? Number(m[0]) : null;
 }
-
-function CellLink({ symbol, strike, metric, cur, prev, start, toggleMode, label }) {
+const dividedAmount = 100;
+function CellLink({
+  symbol,
+  strike,
+  metric,
+  cur,
+  prev,
+  start,
+  toggleMode,
+  label,
+}) {
   const d = cur != null && prev != null ? cur - prev : null;
   const e = cur != null && start != null ? cur - start : null;
   const sign = d == null ? "" : d > 0 ? "+" : "";
   const esign = e == null ? "" : e > 0 ? "+" : "";
-  const color = d == null ? "text-gray-400" : d > 0 ? "text-green-400" : "text-red-400";
-  const ecolor = e == null ? "text-gray-400" : e > 0 ? "text-green-400" : "text-red-400";
+  const color =
+    d == null ? "text-gray-400" : d > 0 ? "text-green-400" : "text-red-400";
+  const ecolor =
+    e == null ? "text-gray-400" : e > 0 ? "text-green-400" : "text-red-400";
 
   return (
     <Link
-      href={`/optiondata/${symbol}/strike/${encodeURIComponent(strike)}/${metric}`}
+      href={`/optiondata/${symbol}/strike/${encodeURIComponent(
+        strike
+      )}/${metric}`}
       className="group block hover:text-sky-300 transition"
       title={`${label} details for ${strike}`}
     >
       <div className="underline-offset-2 group-hover:underline font-medium">
         {cur == null ? "-" : cur.toLocaleString("en-IN")}
       </div>
-      {toggleMode === "prev" || toggleMode === "both" ? (
+            {toggleMode === "prev" || toggleMode === "both" ? (
         <div className="text-[10px] mt-0.5 text-gray-500">
           Prev: {prev == null ? "-" : prev.toLocaleString("en-IN")} ·{" "}
           <span className={color}>
-            {d == null ? "-" : `${sign}${d.toLocaleString("en-IN")}`}
+            {d == null
+              ? "-"
+              : `${sign}${(d / dividedAmount).toLocaleString("en-IN")}`}
           </span>
         </div>
       ) : null}
       {toggleMode === "start" || toggleMode === "both" ? (
         <div className="text-[10px] mt-0.5 text-gray-500">
           Start: {start == null ? "-" : start.toLocaleString("en-IN")} ·{" "}
-          <span className={ecolor}>
-            {e == null ? "-" : `${esign}${e.toLocaleString("en-IN")}`}
+          <span className={color}>
+            {d == null
+              ? "-"
+              : `${sign}${(d / dividedAmount).toLocaleString("en-IN")}`}
           </span>
         </div>
       ) : null}
@@ -68,7 +85,12 @@ function MiniChartCell({ strike, metric, snapshots }) {
       {data.length > 1 ? (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <Line dataKey="value" stroke="#60a5fa" strokeWidth={1} dot={false} />
+            <Line
+              dataKey="value"
+              stroke="#60a5fa"
+              strokeWidth={1}
+              dot={false}
+            />
             <Tooltip
               cursor={false}
               formatter={(v) => v?.toLocaleString("en-IN")}
@@ -84,7 +106,11 @@ function MiniChartCell({ strike, metric, snapshots }) {
   );
 }
 
-export default function OptionChainTable({ snapshots, symbol, underlyingSpot }) {
+export default function OptionChainTable({
+  snapshots,
+  symbol,
+  underlyingSpot,
+}) {
   const [toggleMode, setToggleMode] = useState("start");
 
   const { latest, prev, start } = useMemo(() => {
@@ -110,7 +136,8 @@ export default function OptionChainTable({ snapshots, symbol, underlyingSpot }) 
 
   const atmStrike = useMemo(() => {
     if (!latest?.data?.length || !underlyingSpot) return null;
-    let best = null, bestDiff = Infinity;
+    let best = null,
+      bestDiff = Infinity;
     latest.data.forEach((r) => {
       const k = Number(r.StrikePrice);
       const d = Math.abs(k - underlyingSpot);
@@ -131,16 +158,26 @@ export default function OptionChainTable({ snapshots, symbol, underlyingSpot }) 
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-white/[0.02] backdrop-blur p-3 shadow-lg">
+    <div className="w-full overflow-x-auto rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-white/[0.02] backdrop-blur p-1 sm:p-3 shadow-lg">
       <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
         <h3 className="text-lg sm:text-xl font-semibold text-white">
-          {symbol.replace(/_/g, " ")} Option Chain
+          {symbol
+            .replace(/_/g, " ")
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")}{" "}
+          Option Chain
         </h3>
         <div className="text-xs text-gray-400 flex flex-wrap items-center gap-3">
-          <span>As of: <span className="text-gray-300">{latest.timestamp}</span></span>
+          <span>
+            As of: <span className="text-gray-300">{latest.timestamp}</span>
+          </span>
           {underlyingSpot != null && (
             <span>
-              Spot: <b className="text-sky-300">{underlyingSpot.toLocaleString("en-IN")}</b>
+              Spot:{" "}
+              <b className="text-sky-300">
+                {underlyingSpot.toLocaleString("en-IN")}
+              </b>
             </span>
           )}
         </div>
@@ -156,8 +193,11 @@ export default function OptionChainTable({ snapshots, symbol, underlyingSpot }) 
               <th className="py-1 px-1 text-right">Call OI</th>
               <th className="py-1 px-1 text-center">Chart OI</th>
               <th className="py-2 pr-2 text-center">
-                Strike {atmStrike != null && (
-                  <span className="text-[10px] text-emerald-400">(ATM: {atmStrike})</span>
+                Strike{" "}
+                {atmStrike != null && (
+                  <span className="text-[10px] text-emerald-400">
+                    (ATM: {atmStrike})
+                  </span>
                 )}
               </th>
               <th className="py-1 px-1 text-center">Chart OI</th>
@@ -214,35 +254,95 @@ export default function OptionChainTable({ snapshots, symbol, underlyingSpot }) 
                 <tr
                   key={idx}
                   className={`transition-colors duration-200 hover:bg-white/[0.05] ${
-                    isATM ? "bg-blue-500/20" : idx % 2 === 0 ? "bg-white/[0.02]" : ""
+                    isATM
+                      ? "bg-blue-500/20"
+                      : idx % 2 === 0
+                      ? "bg-white/[0.02]"
+                      : ""
                   }`}
                 >
-                  <td className="py-1 px-1 text-right">{cLTP == null ? "-" : cLTP.toLocaleString("en-IN")}</td>
+                  <td className="py-1 px-1 text-right">
+                    {cLTP == null ? "-" : cLTP.toLocaleString("en-IN")}
+                  </td>
                   <td className="py-1 px-1 text-right text-gray-300">{cChg}</td>
                   <td className="py-1 px-1 text-right align-top">
-                    <CellLink {...{ symbol, strike: kStr, metric: "call-vol", cur: cVol, prev: pCVol, start: sCVol, toggleMode, label: "Call Vol" }} />
+                    <CellLink
+                      {...{
+                        symbol,
+                        strike: kStr,
+                        metric: "call-vol",
+                        cur: cVol,
+                        prev: pCVol,
+                        start: sCVol,
+                        toggleMode,
+                        label: "Call Vol",
+                      }}
+                    />
                   </td>
                   <td className="py-1 px-1 text-right align-top">
-                    <CellLink {...{ symbol, strike: kStr, metric: "call-oi", cur: cOI, prev: pCOI, start: sCOI, toggleMode, label: "Call OI" }} />
+                    <CellLink
+                      {...{
+                        symbol,
+                        strike: kStr,
+                        metric: "call-oi",
+                        cur: cOI,
+                        prev: pCOI,
+                        start: sCOI,
+                        toggleMode,
+                        label: "Call OI",
+                      }}
+                    />
                   </td>
                   <td className="py-1 px-1 text-center">
-                    <MiniChartCell {...{ strike: kStr, metric: "call-oi", snapshots }} />
+                    <MiniChartCell
+                      {...{ strike: kStr, metric: "call-oi", snapshots }}
+                    />
                   </td>
                   <td className="py-1 px-2 font-mono text-center text-gray-200">
-                    {isATM && <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1" />}
+                    {isATM && (
+                      <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1" />
+                    )}
                     {kStr}
                   </td>
                   <td className="py-1 px-1 text-center">
-                    <MiniChartCell {...{ strike: kStr, metric: "put-oi", snapshots }} />
+                    <MiniChartCell
+                      {...{ strike: kStr, metric: "put-oi", snapshots }}
+                    />
                   </td>
                   <td className="py-1 px-1 text-left align-top">
-                    <CellLink {...{ symbol, strike: kStr, metric: "put-oi", cur: pOI, prev: ppOI, start: spOI, toggleMode, label: "Put OI" }} />
+                    <CellLink
+                      {...{
+                        symbol,
+                        strike: kStr,
+                        metric: "put-oi",
+                        cur: pOI,
+                        prev: ppOI,
+                        start: spOI,
+                        toggleMode,
+                        label: "Put OI",
+                      }}
+                    />
                   </td>
                   <td className="py-1 px-1 text-left align-top">
-                    <CellLink {...{ symbol, strike: kStr, metric: "put-vol", cur: putVol, prev: pPutVol, start: sPutVol, toggleMode, label: "Put Vol" }} />
+                    <CellLink
+                      {...{
+                        symbol,
+                        strike: kStr,
+                        metric: "put-vol",
+                        cur: putVol,
+                        prev: pPutVol,
+                        start: sPutVol,
+                        toggleMode,
+                        label: "Put Vol",
+                      }}
+                    />
                   </td>
-                  <td className="py-1 px-1 text-left text-gray-300">{putChg}</td>
-                  <td className="py-1 px-1 text-left">{putLTP == null ? "-" : putLTP.toLocaleString("en-IN")}</td>
+                  <td className="py-1 px-1 text-left text-gray-300">
+                    {putChg}
+                  </td>
+                  <td className="py-1 px-1 text-left">
+                    {putLTP == null ? "-" : putLTP.toLocaleString("en-IN")}
+                  </td>
                 </tr>
               );
             })}

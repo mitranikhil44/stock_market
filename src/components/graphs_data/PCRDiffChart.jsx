@@ -65,7 +65,7 @@ export default function PCRDiffChart({ data }) {
   }
 
   return (
-    <div className="glass-card mt-6 p-4 sm:p-6">
+    <div className="glass-card mt-6 p-2 md:p-4 sm:p-6">
       {/* Selector */}
       <div className="mb-4 flex justify-end">
         <select
@@ -87,7 +87,7 @@ export default function PCRDiffChart({ data }) {
           data={chartData}
           margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <CartesianGrid strokeDasharray="2 2" stroke="#374151" />
           <XAxis
             dataKey="time"
             tick={{ fontSize: 12, fill: "#9CA3AF" }}

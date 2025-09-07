@@ -17,8 +17,8 @@ const PERIOD_MS = {
   "1w": 7*24*60*60*1000,
   "1m": 30*24*60*60*1000,
   "3m": 90*24*60*60*1000,
-  "1y":365*24*60*60*1000,
-  "3y":3*365*24*60*60*1000,
+  "1y": 365*24*60*60*1000,
+  "3y": 3*365*24*60*60*1000,
   all: Infinity,
 };
 
@@ -34,6 +34,15 @@ function formatDateKey(date) {
 function parseDateString(ddmmyyyy) {
   const [d, m, y] = ddmmyyyy.split("-").map(Number);
   return new Date(y, m - 1, d);
+}
+
+// Returns last market day (skip Sat/Sun)
+function getLastMarketDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  if (d.getDay() === 0) d.setDate(d.getDate() - 2); // Sunday → Friday
+  else if (d.getDay() === 6) d.setDate(d.getDate() - 1); // Saturday → Friday
+  return d;
 }
 
 export async function GET(req) {
@@ -52,44 +61,42 @@ export async function GET(req) {
       );
     }
 
-    // 1) Determine “targetDateKey” for 1d
+    // 🔹 Determine target date for 1d period
     const nowIstStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-    const nowIst    = new Date(nowIstStr);
-    const todayKey  = formatDateKey(nowIst);
-    // if before 09:15, roll back to yesterday
-    const isBeforeOpen =
-      nowIst.getHours() < 9 ||
-      (nowIst.getHours() === 9 && nowIst.getMinutes() < 15);
-    const targetDateKey = isBeforeOpen
-      ? formatDateKey(new Date(nowIst.getTime() - 24*60*60*1000))
-      : todayKey;
+    const nowIst = new Date(nowIstStr);
 
-    // 2) sliding cutoff for non-1d periods
-    const ms     = PERIOD_MS[period] ?? PERIOD_MS["1d"];
+    let candidate = new Date(nowIst);
+
+    // If before market open (09:15), use previous day
+    if (nowIst.getHours() < 9 || (nowIst.getHours() === 9 && nowIst.getMinutes() < 15)) {
+      candidate.setDate(candidate.getDate() - 1);
+    }
+
+    // Adjust for weekends
+    const lastMarketDay = getLastMarketDay(candidate);
+    const targetDateKey = formatDateKey(lastMarketDay);
+
+    // 🔹 Sliding cutoff for non-1d periods
+    const ms = PERIOD_MS[period] ?? PERIOD_MS["1d"];
     const cutoff = ms === Infinity ? 0 : Date.now() - ms;
     const isOneDay = period === "1d";
 
-    // 3) fetch all per-date docs
+    // 🔹 Fetch all documents
     const docs = await Model.find({}).sort({ date: 1 }).lean();
 
-    // 4) filter & group
+    // 🔹 Filter & group
     const grouped = {};
     for (const doc of docs) {
-      // normalize date field
-      let docDate = typeof doc.date === "string"
-        ? parseDateString(doc.date)
-        : new Date(doc.date);
+      let docDate = typeof doc.date === "string" ? parseDateString(doc.date) : new Date(doc.date);
       const key = formatDateKey(docDate);
 
       if (isOneDay) {
-        // only include targetDateKey
         if (key !== targetDateKey) continue;
       } else {
-        // sliding-window
         if (docDate.getTime() < cutoff) continue;
       }
 
-      grouped[key] = (grouped[key]||[]).concat(doc.data);
+      grouped[key] = (grouped[key] || []).concat(doc.data);
     }
 
     return NextResponse.json({ success: true, data: grouped });

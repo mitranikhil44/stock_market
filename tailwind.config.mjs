@@ -8,8 +8,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        background: "rgb(var(--background) / <alpha-value>)",
+        "background-muted": "rgb(var(--background-muted) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
+        "accent-1": "rgb(var(--accent-1) / <alpha-value>)",
+        "accent-2": "rgb(var(--accent-2) / <alpha-value>)",
       },
     },
   },

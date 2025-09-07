@@ -10,7 +10,7 @@ export default function TimeWiseChangeTable({ series = [], metric = "" }) {
     netChange > 0 ? "↑ Increased" : netChange < 0 ? "↓ Decreased" : "→ No Change";
 
   return (
-    <div className="mt-6 overflow-auto bg-white/5 border border-white/10 rounded-xl p-4">
+    <div className="mt-6 overflow-auto bg-white/5 border border-white/10 rounded-xl p-2 md:p-4">
       <h3 className="text-sm font-semibold mb-3 text-white">
         📈 Time-wise {metric.toUpperCase()} Changes
       </h3>

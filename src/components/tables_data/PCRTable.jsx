@@ -14,8 +14,8 @@ export default function PCRTable({ data }) {
   }
 
   return (
-    <div className="glass-card mt-6">
-      <h2 className="text-xl font-bold mb-4 text-gray-100">
+    <div className="glass-card p-2">
+      <h2 className="text-xl font-bold p-2 text-gray-100">
         Time-wise PCR Table
       </h2>
 

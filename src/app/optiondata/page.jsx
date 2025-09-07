@@ -101,7 +101,7 @@ export default function OptionDataPage() {
   }, [snapshots, selectedTimestamp]);
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+    <div className="max-w-7xl mx-auto p-2 sm:p-2 ">
       {/* Sticky Header Controls */}
       <div className="border-b border-gray-200 py-3 mb-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -144,7 +144,7 @@ export default function OptionDataPage() {
         <p className="text-center text-red-500 py-10">{error}</p>
       ) : (
         <>
-          <div className="shadow-lg rounded-2xl p-4 sm:p-6">
+          <div className="shadow-lg rounded-2xl p-1 sm:p-3">
             <OptionChainTable
               snapshots={filteredSnapshots}
               symbol={symbol}
@@ -154,7 +154,7 @@ export default function OptionDataPage() {
           </div>
 
           {filteredSnapshots.length > 0 && (
-            <div className="shadow-lg rounded-2xl p-4 sm:p-6 mt-6">
+            <div className="shadow-lg rounded-2xl p-1 sm:p-3 mt-2 sm:mt-4">
               <OptionChainChart
                 snapshot={filteredSnapshots[filteredSnapshots.length - 1]}
               />

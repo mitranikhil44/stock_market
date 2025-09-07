@@ -20,7 +20,7 @@ const checkFormFilleds = async (name, email, password) => {
 const registerUser = async (name, email, password) => {
   localStorage.clear();
   let role = "user";
-  const response = await fetch("/api/auth/sign_up", {
+  const response = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password, role }),

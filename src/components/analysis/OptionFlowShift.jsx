@@ -367,14 +367,14 @@ export default function OptionFlowShift({
   }, [built, side, topN]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 md:space-y-4">
       {/* header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap">
         <div>
           <h3 className="text-lg font-semibold">Flow / Shift Analysis (Prev → Latest)</h3>
           <p className="text-xs text-slate-400">Detect where OI/Volume is shifting between last two snapshots.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-2">
           <label className="text-xs text-slate-300">Side</label>
           <select
             className="text-xs bg-white text-slate-900 border rounded-lg px-2 py-1"

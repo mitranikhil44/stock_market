@@ -34,7 +34,7 @@ export default function Navbar() {
   return (
     <nav className="bg-gray-900 text-white shadow-md px-4 sm:px-6 py-3 flex items-center justify-between">
       <Link href="/" className="text-xl font-bold text-blue-400">
-        📈 MyMarket
+        📈 Option Flow
       </Link>
 
       {/* Hamburger button (mobile) */}
@@ -60,9 +60,11 @@ export default function Navbar() {
             </Link>
           </>
         ) : (
-          <Link href="/login" className="bg-blue-600 text-sm px-3 py-1 rounded hover:bg-blue-500">
-            Login / Signup
-          </Link>
+          <>
+           {/* <Link href="/login" className="bg-blue-600 text-sm px-3 py-1 rounded hover:bg-blue-500">
+             Login / Signup
+           </Link> */}
+          .</>
         )}
       </div>
 
