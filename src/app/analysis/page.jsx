@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import OptionFlowShift from "@/components/analysis/OptionFlowShift";
 import PCRTable from "@/components/tables_data/PCRTable";
@@ -15,6 +15,7 @@ const symbolToIndex = {
 
 const SCALE_DIVISOR = 1000000;
 
+// 🔹 Calculate PCR timewise
 function calculateTimewisePCR(snapshots) {
   const cleanNum = (val) => {
     if (typeof val !== "string") return 0;
@@ -50,6 +51,7 @@ function calculateTimewisePCR(snapshots) {
   });
 }
 
+// 🔹 Prediction Trend
 function getPredictionTrend(timewiseData, startIndex, endIndex, opts = {}) {
   const {
     oiPctThreshold = 0.005,
@@ -132,6 +134,9 @@ const Analysis = () => {
   const [spot, setSpot] = useState(null);
   const [selectedEndIndex, setSelectedEndIndex] = useState(null);
 
+  // 🔹 New: Interval state
+  const [interval, setInterval] = useState("1m");
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -169,7 +174,29 @@ const Analysis = () => {
     };
   }, [symbol]);
 
+  // 🔹 PCR Data
   const timewiseData = calculateTimewisePCR(snapshots);
+
+  // 🔹 Filter by interval
+  const intervalMap = { "1m": 1, "5m": 5, "15m": 15, "30m": 30 };
+  function getMinutes(ts) {
+    try {
+      if (ts.includes(":") && !ts.includes("T")) {
+        const parts = ts.split(":");
+        return parseInt(parts[1], 10);
+      } else {
+        return new Date(ts).getMinutes();
+      }
+    } catch {
+      return 0;
+    }
+  }
+  const filteredData = useMemo(() => {
+    const minutes = intervalMap[interval];
+    if (!minutes) return timewiseData;
+    return timewiseData.filter((row) => getMinutes(row.timestamp) % minutes === 0);
+  }, [timewiseData, interval]);
+
   const prediction =
     selectedEndIndex !== null
       ? getPredictionTrend(timewiseData, 0, selectedEndIndex)
@@ -182,35 +209,57 @@ const Analysis = () => {
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
-        <h1 className="text-2xl font-bold text-foreground">
-          📊 Option Analysis
-        </h1>
-        <div className="relative w-full sm:w-auto">
-          <select
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            className="appearance-none glass-card w-full sm:w-auto px-4 py-2 pr-8 text-sm text-foreground bg-transparent border border-white/20 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-          >
-            <option value="bank_nifty">Bank Nifty</option>
-            <option value="nifty_50">Nifty 50</option>
-            <option value="fin_nifty">Fin Nifty</option>
-            <option value="midcap_nifty_50">Midcap 50</option>
-          </select>
-          {/* 🔹 Dropdown arrow */}
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            <svg
-              className="h-4 w-4 text-gray-300"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
+        <h1 className="text-2xl font-bold text-foreground">📊 Option Analysis</h1>
+
+        <div className="flex gap-3 items-center">
+          {/* Symbol Selector */}
+          <div className="relative">
+            <select
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              className="appearance-none rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 px-2 py-1 sm:px-4 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+              <option value="bank_nifty">Bank Nifty</option>
+              <option value="nifty_50">Nifty 50</option>
+              <option value="fin_nifty">Fin Nifty</option>
+              <option value="midcap_nifty_50">Midcap 50</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+              <svg
+                className="h-4 w-4 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          {/* 🔹 Interval Selector */}
+          <div className="relative">
+            <select
+          value={interval}
+          onChange={(e) => setInterval(e.target.value)}
+          className="appearance-none rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 px-2 py-1 sm:px-4 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        >
+          <option value="1m">1 Min</option>
+          <option value="5m">5 Min</option>
+          <option value="15m">15 Min</option>
+          <option value="30m">30 Min</option>
+        </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+              <svg
+                className="h-4 w-4 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
         </div>
       </div>
@@ -224,17 +273,17 @@ const Analysis = () => {
           {snapshots.length > 0 && (
             <>
               <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto">
-                <PCRTable data={timewiseData} />
+                <PCRTable data={filteredData} />
               </div>
 
               <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto">
-                <PCRDiffChart data={timewiseData} />
+                <PCRDiffChart data={filteredData} />
               </div>
 
               {/* Time Selector Table */}
               <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto max-h-64">
                 <h3 className="text-sm font-medium mb-2 text-foreground/90">
-                  Select End Time (Default = Last)
+                  Select End Time (Default = Latest)
                 </h3>
                 <table className="w-full text-xs border-collapse text-foreground/90 min-w-[400px]">
                   <thead>
@@ -245,7 +294,7 @@ const Analysis = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {timewiseData.map((row, idx) => (
+                    {filteredData.map((row, idx) => (
                       <tr
                         key={idx}
                         className={`border-b border-white/10 ${
@@ -295,7 +344,7 @@ const Analysis = () => {
                   </div>
                   <p className="text-sm text-gray-500 mt-2">
                     Based on OI + Volume + PCR shifts (Start →{" "}
-                    {timewiseData[selectedEndIndex]?.timestamp})
+                    {filteredData[selectedEndIndex]?.timestamp})
                   </p>
                 </div>
               )}

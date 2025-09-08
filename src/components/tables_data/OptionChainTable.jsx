@@ -13,6 +13,7 @@ function parseNum(x) {
   return m ? Number(m[0]) : null;
 }
 const dividedAmount = 100;
+
 function CellLink({
   symbol,
   strike,
@@ -37,32 +38,39 @@ function CellLink({
       href={`/optiondata/${symbol}/strike/${encodeURIComponent(
         strike
       )}/${metric}`}
-      className="group block hover:text-sky-300 transition"
       title={`${label} details for ${strike}`}
+      className="group flex flex-col items-center justify-center px-2 py-1 
+             text-center hover:bg-blue-900/20 transition rounded-md"
     >
-      <div className="underline-offset-2 group-hover:underline font-medium">
+      {/* Current Value */}
+      <div className="font-semibold text-[13px] text-gray-100 group-hover:text-sky-300">
         {cur == null ? "-" : cur.toLocaleString("en-IN")}
       </div>
-            {toggleMode === "prev" || toggleMode === "both" ? (
-        <div className="text-[10px] mt-0.5 text-gray-500">
-          Prev: {prev == null ? "-" : prev.toLocaleString("en-IN")} ·{" "}
-          <span className={color}>
-            {d == null
-              ? "-"
-              : `${sign}${(d / dividedAmount).toLocaleString("en-IN")}`}
-          </span>
-        </div>
-      ) : null}
-      {toggleMode === "start" || toggleMode === "both" ? (
-        <div className="text-[10px] mt-0.5 text-gray-500">
-          Start: {start == null ? "-" : start.toLocaleString("en-IN")} ·{" "}
-          <span className={color}>
-            {d == null
-              ? "-"
-              : `${sign}${(d / dividedAmount).toLocaleString("en-IN")}`}
-          </span>
-        </div>
-      ) : null}
+
+      {/* Prev & Start Section */}
+      <div className="flex flex-col gap-[1px] mt-0.5 text-[10px] leading-tight text-gray-400">
+        {/* Prev Row */}
+        {(toggleMode === "prev" || toggleMode === "both") && (
+          <div className="flex justify-center gap-1">
+            <span className="text-gray-500">P:</span>
+            <span>{prev == null ? "-" : prev.toLocaleString("en-IN")}</span>
+            <span className={`font-medium ${color}`}>
+              {d == null ? "-" : `${sign}${(d / dividedAmount).toFixed(2)}`}
+            </span>
+          </div>
+        )}
+
+        {/* Start Row */}
+        {(toggleMode === "start" || toggleMode === "both") && (
+          <div className="flex justify-center gap-1">
+            <span className="text-gray-500">S:</span>
+            <span>{start == null ? "-" : start.toLocaleString("en-IN")}</span>
+            <span className={`font-medium ${color}`}>
+              {e == null ? "-" : `${esign}${(e / dividedAmount).toFixed(2)}`}
+            </span>
+          </div>
+        )}
+      </div>
     </Link>
   );
 }
@@ -112,15 +120,22 @@ export default function OptionChainTable({
   underlyingSpot,
 }) {
   const [toggleMode, setToggleMode] = useState("start");
+  const [interval, setInterval] = useState(1); // default 1 min
 
   const { latest, prev, start } = useMemo(() => {
     if (!snapshots?.length) return { latest: null, prev: null, start: null };
+
+    const latestSnap = snapshots[snapshots.length - 1];
+    const intervalIndex = Math.max(snapshots.length - 1 - interval, 0); // interval-based prev
+    const prevSnap = snapshots[intervalIndex];
+    const startSnap = snapshots[1] || {};
+
     return {
-      latest: snapshots[snapshots.length - 1],
-      prev: snapshots.length >= 2 ? snapshots[snapshots.length - 2] : {},
-      start: snapshots[1] || {},
+      latest: latestSnap,
+      prev: prevSnap,
+      start: startSnap,
     };
-  }, [snapshots]);
+  }, [snapshots, interval]);
 
   const prevByStrike = useMemo(() => {
     const m = new Map();
@@ -168,7 +183,7 @@ export default function OptionChainTable({
             .join(" ")}{" "}
           Option Chain
         </h3>
-        <div className="text-xs text-gray-400 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3 text-xs text-gray-400">
           <span>
             As of: <span className="text-gray-300">{latest.timestamp}</span>
           </span>
@@ -208,17 +223,37 @@ export default function OptionChainTable({
             </tr>
             <tr>
               <td colSpan={11} className="pb-1 border-b border-white/10">
-                <div className="flex items-center justify-center gap-2">
-                  <label className="text-[10px] text-slate-300">Show</label>
-                  <select
-                    className="text-[10px] bg-white text-slate-900 border rounded px-1 py-0.5"
-                    value={toggleMode}
-                    onChange={(e) => setToggleMode(e.target.value)}
-                  >
-                    <option value="both">Both</option>
-                    <option value="start">Start</option>
-                    <option value="prev">Prev</option>
-                  </select>
+                <div className="flex items-center justify-center gap-4">
+                  {/* Toggle Mode */}
+                  <div className="flex items-center gap-1">
+                    <label className="text-[10px] text-slate-300">Show</label>
+                    <select
+                      className="text-[10px] bg-white text-slate-900 border rounded px-1 py-0.5"
+                      value={toggleMode}
+                      onChange={(e) => setToggleMode(e.target.value)}
+                    >
+                      <option value="both">Both</option>
+                      <option value="start">Start</option>
+                      <option value="prev">Prev</option>
+                    </select>
+                  </div>
+
+                  {/* Interval Selector */}
+                  <div className="flex items-center gap-1">
+                    <label className="text-[10px] text-slate-300">
+                      Interval
+                    </label>
+                    <select
+                      className="text-[10px] bg-white text-slate-900 border rounded px-1 py-0.5"
+                      value={interval}
+                      onChange={(e) => setInterval(Number(e.target.value))}
+                    >
+                      <option value={1}>1 min</option>
+                      <option value={5}>5 min</option>
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                    </select>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -253,11 +288,11 @@ export default function OptionChainTable({
               return (
                 <tr
                   key={idx}
-                  className={`transition-colors duration-200 hover:bg-white/[0.05] ${
+                  className={`transition-colors duration-200 hover:bg-blue-500/40 ${
                     isATM
-                      ? "bg-blue-500/20"
+                      ? "bg-blue-500/60"
                       : idx % 2 === 0
-                      ? "bg-white/[0.02]"
+                      ? "bg-white/5"
                       : ""
                   }`}
                 >
