@@ -136,7 +136,7 @@ const Analysis = () => {
   const [selectedEndIndex, setSelectedEndIndex] = useState(null);
 
   // 🔹 Interval state
-  const [interval, setInterval] = useState("1m");
+  const [interval, setInterval] = useState("all");
 
   useEffect(() => {
     let mounted = true;
