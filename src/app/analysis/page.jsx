@@ -5,6 +5,7 @@ import axios from "axios";
 import OptionFlowShift from "@/components/analysis/OptionFlowShift";
 import PCRTable from "@/components/tables_data/PCRTable";
 import PCRDiffChart from "@/components/graphs_data/PCRDiffChart";
+import OptionHeatmapPrediction from "@/components/analysis/OptionHeatmapPrediction";
 
 const symbolToIndex = {
   bank_nifty: "bank_nifty",
@@ -134,7 +135,7 @@ const Analysis = () => {
   const [spot, setSpot] = useState(null);
   const [selectedEndIndex, setSelectedEndIndex] = useState(null);
 
-  // 🔹 New: Interval state
+  // 🔹 Interval state
   const [interval, setInterval] = useState("1m");
 
   useEffect(() => {
@@ -177,7 +178,7 @@ const Analysis = () => {
   // 🔹 PCR Data
   const timewiseData = calculateTimewisePCR(snapshots);
 
-  // 🔹 Filter by interval
+  // 🔹 Interval filtering
   const intervalMap = { "1m": 1, "5m": 5, "15m": 15, "30m": 30 };
   function getMinutes(ts) {
     try {
@@ -192,9 +193,12 @@ const Analysis = () => {
     }
   }
   const filteredData = useMemo(() => {
+    if (interval === "all") return timewiseData; // 🔹 All time
     const minutes = intervalMap[interval];
     if (!minutes) return timewiseData;
-    return timewiseData.filter((row) => getMinutes(row.timestamp) % minutes === 0);
+    return timewiseData.filter(
+      (row) => getMinutes(row.timestamp) % minutes === 0
+    );
   }, [timewiseData, interval]);
 
   const prediction =
@@ -209,7 +213,9 @@ const Analysis = () => {
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
-        <h1 className="text-2xl font-bold text-foreground">📊 Option Analysis</h1>
+        <h1 className="text-2xl font-bold text-foreground">
+          📊 Option Analysis
+        </h1>
 
         <div className="flex gap-3 items-center">
           {/* Symbol Selector */}
@@ -240,15 +246,16 @@ const Analysis = () => {
           {/* 🔹 Interval Selector */}
           <div className="relative">
             <select
-          value={interval}
-          onChange={(e) => setInterval(e.target.value)}
-          className="appearance-none rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 px-2 py-1 sm:px-4 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-        >
-          <option value="1m">1 Min</option>
-          <option value="5m">5 Min</option>
-          <option value="15m">15 Min</option>
-          <option value="30m">30 Min</option>
-        </select>
+              value={interval}
+              onChange={(e) => setInterval(e.target.value)}
+              className="appearance-none rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 px-2 py-1 sm:px-4 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            >
+              <option value="all">All Time</option>  {/* 🔹 New */}
+              <option value="1m">1 Min</option>
+              <option value="5m">5 Min</option>
+              <option value="15m">15 Min</option>
+              <option value="30m">30 Min</option>
+            </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
               <svg
                 className="h-4 w-4 text-gray-300"
@@ -350,7 +357,16 @@ const Analysis = () => {
               )}
             </>
           )}
-
+         {latest && prev && (
+            <div className="mt-6 glass-card p-2 md:p-4 overflow-x-auto">
+              <OptionHeatmapPrediction
+                latestSnapshot={latest}
+                prevSnapshot={prev}
+                symbol={symbol}
+                spot={spot} 
+                />
+            </div>
+          )}
           {latest && prev && (
             <div className="mt-6 glass-card p-2 md:p-4 overflow-x-auto">
               <OptionFlowShift
@@ -359,7 +375,7 @@ const Analysis = () => {
                 symbol={symbol}
                 topN={8}
                 minAbsChange={1000}
-              />
+                />
             </div>
           )}
         </>

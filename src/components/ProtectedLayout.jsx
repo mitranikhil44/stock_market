@@ -26,7 +26,7 @@ export default function ProtectedLayout({ children }) {
     }
 
     // Agar user login page pe hai aur token already hai → home bhejo
-    if (token && pathname === "/login") {
+    if (!token && !pathname === "/login") {
       router.push("/");
     }
 
