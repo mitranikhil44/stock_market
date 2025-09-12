@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import OptionChainTable from "@/components/tables_data/OptionChainTable";
 import OptionChainChart from "@/components/graphs_data/OptionChainChart";
+import { RefreshCcw } from "lucide-react"; // refresh icon
 
 // Convert "9:15:20 AM" → total seconds
 const parseTime = (timeStr) => {
@@ -32,51 +33,46 @@ export default function OptionDataPage() {
   const [error, setError] = useState("");
   const [spot, setSpot] = useState(null);
   const [filteredSnapshots, setFilteredSnapshots] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch snapshots + spot
-  useEffect(() => {
-    let mounted = true;
+  // ✅ Fetch snapshots + spot (extracted for reuse)
+  const fetchData = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      setError("");
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError("");
+      // Fetch option chain
+      const oc = await axios.get(
+        `/api/market_data/option_chain?symbol=${symbol}&sort=asc`
+      );
+      const arr = oc.data?.data || [];
+      setSnapshots(arr);
+      setSelectedTimestamp(arr.length > 0 ? arr[arr.length - 1].timestamp : "");
 
-        // Fetch option chain
-        const oc = await axios.get(
-          `/api/market_data/option_chain?symbol=${symbol}&sort=asc`
-        );
-        const arr = oc.data?.data || [];
+      // Fetch spot price
+      const priceIndex = symbolToIndex[symbol] || symbol;
+      const mp = await axios.get(
+        `/api/market_data/price?symbol=${priceIndex}&period=1d`
+      );
+      const allSeries = Object.values(mp.data?.data || {}).flat();
+      const lastItem =
+        allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
 
-        if (mounted) {
-          setSnapshots(arr);
-          setSelectedTimestamp(arr.length > 0 ? arr[arr.length - 1].timestamp : "");
-        }
-
-        // Fetch spot price
-        const priceIndex = symbolToIndex[symbol] || symbol;
-        const mp = await axios.get(
-          `/api/market_data/price?symbol=${priceIndex}&period=1d`
-        );
-        const allSeries = Object.values(mp.data?.data || {}).flat();
-        const lastItem = allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
-
-        if (mounted) {
-          setSpot(lastItem ? Number(lastItem.price) : null);
-        }
-      } catch (e) {
-        console.error(e);
-        if (mounted) setError("Failed to load option data or spot.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    fetchData();
-    return () => {
-      mounted = false;
-    };
+      setSpot(lastItem ? Number(lastItem.price) : null);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to load option data or spot.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [symbol]);
+
+  // Initial fetch
+  useEffect(() => {
+    setLoading(true);
+    fetchData();
+  }, [symbol, fetchData]);
 
   // Filter snapshots when timestamp changes
   useEffect(() => {
@@ -101,12 +97,13 @@ export default function OptionDataPage() {
   }, [snapshots, selectedTimestamp]);
 
   return (
-    <div className="max-w-7xl mx-auto p-2 sm:p-2 ">
+    <div className="max-w-7xl mx-auto px-4 sm:px-2">
       {/* Sticky Header Controls */}
-      <div className="border-b border-gray-200 py-3 mb-4">
+      <div className="border-b py-3 mb-4 sticky top-0 bg-white/5 backdrop-blur z-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h1 className="text-xl sm:text-2xl font-bold">📊 Option Data</h1>
-          <div className="flex flex-wrap gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
@@ -131,6 +128,21 @@ export default function OptionDataPage() {
                 ))}
               </select>
             )}
+
+            {/* 🔄 Refresh Button */}
+            <button
+              type="button"
+              onClick={fetchData}
+              className="p-2 rounded-lg border mr-2 border-gray-300 bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+              disabled={refreshing}
+              title="Refresh Data"
+            >
+              <RefreshCcw
+                className={`w-5 h-5 ${
+                  refreshing ? "animate-spin text-blue-500" : "text-gray-700"
+                }`}
+              />
+            </button>
           </div>
         </div>
       </div>

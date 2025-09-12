@@ -133,15 +133,34 @@ export default function StrikeMetricPage() {
         <Link href="/optiondata" className="text-sm text-sky-400 hover:underline">← Back</Link>
       </div>
 
-      <div className="mb-4 flex items-center gap-2">
+      {/* Toggle Buttons */}
+      <div className="mb-6 flex items-center gap-3">
         <label className="text-xs text-gray-400">Chart:</label>
-        <select value={chartType} onChange={(e) => setChartType(e.target.value)}
-                className="text-sm bg-white text-gray-900 border rounded px-2 py-1">
-          <option value="line">Line</option>
-          <option value="bar">Bar</option>
-        </select>
+        <div className="flex rounded-xl overflow-hidden border border-white/20 bg-white">
+          <button
+            onClick={() => setChartType('line')}
+            className={`px-4 py-1 text-sm font-medium transition 
+              ${chartType === 'line'
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            Line
+          </button>
+          <button
+            onClick={() => setChartType('bar')}
+            className={`px-4 py-1 text-sm font-medium transition 
+              ${chartType === 'bar'
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            Bar
+          </button>
+        </div>
       </div>
 
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
         <Stat label="Points" value={analysis?.obs ?? '-'} />
         <Stat label="Moves" value={analysis?.moves ?? '-'} />
@@ -153,6 +172,7 @@ export default function StrikeMetricPage() {
         <Stat label="Min @" value={analysis ? `${analysis.minVal.toLocaleString('en-IN')} @ ${analysis.minTime}` : '-'} />
       </div>
 
+      {/* Chart */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
         {loading ? (
           <p className="text-center text-gray-400 py-10">Loading…</p>
@@ -168,7 +188,12 @@ export default function StrikeMetricPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
                   <XAxis dataKey="time" angle={-25} textAnchor="end" height={50} tick={{ fontSize: 10, fill: '#cbd5e1' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#cbd5e1' }} width={60} tickFormatter={compactNum} />
-                  <Tooltip formatter={(v) => [v.toLocaleString('en-IN'), metric.toUpperCase()]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
+                    labelStyle={{ color: '#9ca3af' }}
+                    itemStyle={{ color: '#f9fafb' }}
+                    formatter={(v) => [v.toLocaleString('en-IN'), metric.toUpperCase()]}
+                  />
                   <Legend />
                   <Bar dataKey="value" name={metric.toUpperCase()} fill="#60a5fa" />
                   <Brush dataKey="time" height={22} travellerWidth={8} stroke="#9ca3af" />
@@ -178,7 +203,12 @@ export default function StrikeMetricPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
                   <XAxis dataKey="time" angle={-25} textAnchor="end" height={50} tick={{ fontSize: 10, fill: '#cbd5e1' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#cbd5e1' }} width={60} tickFormatter={compactNum} />
-                  <Tooltip formatter={(v) => [v.toLocaleString('en-IN'), metric.toUpperCase()]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
+                    labelStyle={{ color: '#9ca3af' }}
+                    itemStyle={{ color: '#f9fafb' }}
+                    formatter={(v) => [v.toLocaleString('en-IN'), metric.toUpperCase()]}
+                  />
                   <Legend />
                   <Line dataKey="value" name={metric.toUpperCase()} stroke="#60a5fa" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                   <Brush dataKey="time" height={22} travellerWidth={8} stroke="#9ca3af" />
@@ -189,11 +219,12 @@ export default function StrikeMetricPage() {
         )}
       </div>
 
+      {/* Time-wise Changes Table */}
       {!!series.length && (
         <div className="mt-6 overflow-x-auto bg-white/5 border border-white/10 rounded-xl p-3">
           <h4 className="text-sm font-semibold mb-2">Time-wise Changes</h4>
           <table className="min-w-[500px] w-full text-xs sm:text-sm">
-            <thead className="bg-black text-gray-300 sticky top-0">
+            <thead className="bg-gray-900 text-gray-300 sticky top-0">
               <tr>
                 <th className="px-2 py-1">Time</th>
                 <th className="px-2 py-1">{metric.toUpperCase()}</th>

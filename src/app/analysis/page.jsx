@@ -6,6 +6,7 @@ import OptionFlowShift from "@/components/analysis/OptionFlowShift";
 import PCRTable from "@/components/tables_data/PCRTable";
 import PCRDiffChart from "@/components/graphs_data/PCRDiffChart";
 import OptionHeatmapPrediction from "@/components/analysis/OptionHeatmapPrediction";
+import { RefreshCw } from "lucide-react"; // refresh icon
 
 const symbolToIndex = {
   bank_nifty: "bank_nifty",
@@ -52,7 +53,7 @@ function calculateTimewisePCR(snapshots) {
   });
 }
 
-// 🔹 Prediction Trend
+// 🔹 Prediction Trend (same as before)
 function getPredictionTrend(timewiseData, startIndex, endIndex, opts = {}) {
   const {
     oiPctThreshold = 0.005,
@@ -130,55 +131,52 @@ function getPredictionTrend(timewiseData, startIndex, endIndex, opts = {}) {
 const Analysis = () => {
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [symbol, setSymbol] = useState("nifty_50");
   const [error, setError] = useState("");
   const [spot, setSpot] = useState(null);
   const [selectedEndIndex, setSelectedEndIndex] = useState(null);
 
-  // 🔹 Interval state
   const [interval, setInterval] = useState("all");
 
+  // 🔹 fetchData function (reusable for refresh)
+  const fetchData = async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setLoading(true); // ✅ sirf first load ke time par loading
+      setError("");
+
+      const oc = await axios.get(
+        `/api/market_data/option_chain?symbol=${symbol}&sort=asc&period=1d`
+      );
+      const arr = oc.data?.data || [];
+      setSnapshots(arr);
+      setSelectedEndIndex(arr.length - 1);
+
+      const priceIndex = symbolToIndex[symbol] || symbol;
+      const mp = await axios.get(
+        `/api/market_data/price?symbol=${priceIndex}&period=1d`
+      );
+      const seriesRaw = mp.data?.data || {};
+      const allSeries = Object.values(seriesRaw).flat();
+      const lastItem =
+        allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
+      setSpot(lastItem ? Number(lastItem.price) : null);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to load option data or spot.");
+    } finally {
+      if (!isRefresh) setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const oc = await axios.get(
-          `/api/market_data/option_chain?symbol=${symbol}&sort=asc&period=1d`
-        );
-        const arr = oc.data?.data || [];
-        if (mounted) {
-          setSnapshots(arr);
-          setSelectedEndIndex(arr.length - 1);
-        }
-
-        const priceIndex = symbolToIndex[symbol] || symbol;
-        const mp = await axios.get(
-          `/api/market_data/price?symbol=${priceIndex}&period=1d`
-        );
-        const seriesRaw = mp.data?.data || {};
-        const allSeries = Object.values(seriesRaw).flat();
-        const lastItem =
-          allSeries.length > 0 ? allSeries[allSeries.length - 1] : null;
-        if (mounted) setSpot(lastItem ? Number(lastItem.price) : null);
-      } catch (e) {
-        console.error(e);
-        if (mounted) setError("Failed to load option data or spot.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    fetchData();
   }, [symbol]);
 
   // 🔹 PCR Data
   const timewiseData = calculateTimewisePCR(snapshots);
 
-  // 🔹 Interval filtering
   const intervalMap = { "1m": 1, "5m": 5, "15m": 15, "30m": 30 };
   function getMinutes(ts) {
     try {
@@ -193,7 +191,7 @@ const Analysis = () => {
     }
   }
   const filteredData = useMemo(() => {
-    if (interval === "all") return timewiseData; // 🔹 All time
+    if (interval === "all") return timewiseData;
     const minutes = intervalMap[interval];
     if (!minutes) return timewiseData;
     return timewiseData.filter(
@@ -211,15 +209,15 @@ const Analysis = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
-        <h1 className="text-2xl font-bold text-foreground">
-          📊 Option Analysis
-        </h1>
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-20 bg-gray-950/80 backdrop-blur-md border-b border-white/10 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-3 gap-3">
+          <h1 className="text-2xl font-bold text-foreground">
+            📊 Option Analysis
+          </h1>
 
-        <div className="flex gap-3 items-center">
-          {/* Symbol Selector */}
-          <div className="relative">
+          <div className="flex gap-3 items-center">
+            {/* Symbol Selector */}
             <select
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
@@ -230,47 +228,40 @@ const Analysis = () => {
               <option value="fin_nifty">Fin Nifty</option>
               <option value="midcap_nifty_50">Midcap 50</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-              <svg
-                className="h-4 w-4 text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
 
-          {/* 🔹 Interval Selector */}
-          <div className="relative">
+            {/* Interval Selector */}
             <select
               value={interval}
               onChange={(e) => setInterval(e.target.value)}
               className="appearance-none rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 px-2 py-1 sm:px-4 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             >
-              <option value="all">All Time</option>  {/* 🔹 New */}
+              <option value="all">All Time</option>
               <option value="1m">1 Min</option>
               <option value="5m">5 Min</option>
               <option value="15m">15 Min</option>
               <option value="30m">30 Min</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-              <svg
-                className="h-4 w-4 text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+
+            {/* Refresh Button */}
+            <button
+              onClick={() => {
+                setRefreshing(true);
+                fetchData(true); // ✅ pass isRefresh = true
+              }}
+              className="p-2 rounded-full mr-4 sm:mr-2 bg-gray-800 hover:bg-gray-700 transition"
+              title="Refresh Data"
+            >
+              <RefreshCw
+                className={`h-5 w-5 text-blue-400 ${
+                  refreshing ? "animate-spin" : ""
+                }`}
+              />
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Body */}
       {loading ? (
         <p className="text-center text-gray-400 py-10">Loading option chain…</p>
       ) : error ? (
@@ -287,50 +278,7 @@ const Analysis = () => {
                 <PCRDiffChart data={filteredData} />
               </div>
 
-              {/* Time Selector Table */}
-              <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto max-h-64">
-                <h3 className="text-sm font-medium mb-2 text-foreground/90">
-                  Select End Time (Default = Latest)
-                </h3>
-                <table className="w-full text-xs border-collapse text-foreground/90 min-w-[400px]">
-                  <thead>
-                    <tr className="bg-white/10">
-                      <th className="px-2 py-1 text-left">#</th>
-                      <th className="px-2 py-1 text-left">Timestamp</th>
-                      <th className="px-2 py-1 text-center">Select</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredData.map((row, idx) => (
-                      <tr
-                        key={idx}
-                        className={`border-b border-white/10 ${
-                          selectedEndIndex === idx
-                            ? "bg-white/20 font-semibold"
-                            : ""
-                        }`}
-                      >
-                        <td className="px-2 py-1">{idx + 1}</td>
-                        <td className="px-2 py-1">{row.timestamp}</td>
-                        <td className="px-2 py-1 text-center">
-                          <button
-                            onClick={() => setSelectedEndIndex(idx)}
-                            className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
-                              selectedEndIndex === idx
-                                ? "bg-blue-600 text-white"
-                                : "bg-white/5 hover:bg-white/20"
-                            }`}
-                          >
-                            Use
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Prediction Card */}
+              {/* Prediction */}
               {prediction && (
                 <div
                   className={`glass-card p-2 md:p-4 mt-4 ${
@@ -349,22 +297,19 @@ const Analysis = () => {
                       ? prediction.reasons.join(" · ")
                       : "No strong signals"}
                   </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Based on OI + Volume + PCR shifts (Start →{" "}
-                    {filteredData[selectedEndIndex]?.timestamp})
-                  </p>
                 </div>
               )}
             </>
           )}
-         {latest && prev && (
+
+          {latest && prev && (
             <div className="mt-6 glass-card p-2 md:p-4 overflow-x-auto">
               <OptionHeatmapPrediction
                 latestSnapshot={latest}
                 prevSnapshot={prev}
                 symbol={symbol}
-                spot={spot} 
-                />
+                spot={spot}
+              />
             </div>
           )}
           {latest && prev && (
@@ -375,7 +320,7 @@ const Analysis = () => {
                 symbol={symbol}
                 topN={8}
                 minAbsChange={1000}
-                />
+              />
             </div>
           )}
         </>

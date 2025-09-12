@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 
+// 🔹 Utility: Parse numbers safely
 function parseNum(x) {
   if (x == null) return null;
   const s = String(x).trim();
@@ -9,11 +10,13 @@ function parseNum(x) {
   return Number(s.replace(/,/g, "")) || null;
 }
 
+// 🔹 Intensity for background color strength
 function intensity(val, maxAbs) {
   if (val == null || maxAbs === 0) return 0;
   return Math.min(1, Math.abs(val) / maxAbs);
 }
 
+// 🔹 Classify option move based on price + OI
 function classifyMove(priceChg, oiChg) {
   if (priceChg == null || oiChg == null) return "No Data";
 
@@ -30,6 +33,7 @@ export default function OptionHeatmapPrediction({
   symbol,
   spot, // 🔹 ATM highlight
 }) {
+  // 🔹 Process rows
   const rows = useMemo(() => {
     if (!latestSnapshot || !prevSnapshot) return [];
 
@@ -78,6 +82,7 @@ export default function OptionHeatmapPrediction({
     });
   }, [latestSnapshot, prevSnapshot]);
 
+  // 🔹 Intensity max reference
   const maxAbs = useMemo(() => {
     return Math.max(
       ...rows.flatMap((r) => [
@@ -88,7 +93,7 @@ export default function OptionHeatmapPrediction({
     );
   }, [rows]);
 
-  // 🔹 Find nearest strike to spot
+  // 🔹 ATM strike detection
   const atmStrike = useMemo(() => {
     if (!spot || rows.length === 0) return null;
     let nearest = rows[0].strike;
@@ -103,18 +108,31 @@ export default function OptionHeatmapPrediction({
     return nearest;
   }, [rows, spot]);
 
-  const netCall = rows.reduce((a, r) => a + (r.callOiDelta ?? 0), 0);
-  const netPut = rows.reduce((a, r) => a + (r.putOiDelta ?? 0), 0);
+  // 🔹 Net calculations for prediction
+  const netCallOI = rows.reduce((a, r) => a + (r.callOiDelta ?? 0), 0);
+  const netPutOI = rows.reduce((a, r) => a + (r.putOiDelta ?? 0), 0);
+  const netCallPrice = rows.reduce((a, r) => a + (r.callPriceChg ?? 0), 0);
+  const netPutPrice = rows.reduce((a, r) => a + (r.putPriceChg ?? 0), 0);
 
-  let netBias = "Neutral";
-  if (netCall > netPut * 1.2) netBias = "Bullish Bias 📈";
-  else if (netPut > netCall * 1.2) netBias = "Bearish Bias 📉";
+  // 🔹 Market bias prediction
+  let netBias = "Neutral Market 😐";
+  if (netCallOI > netPutOI * 1.3 && netCallPrice > 0) {
+    netBias = "Bullish Bias 🚀";
+  } else if (netPutOI > netCallOI * 1.3 && netPutPrice > 0) {
+    netBias = "Bearish Bias 🐻";
+  } else if (netCallOI > netPutOI && netPutPrice < 0) {
+    netBias = "Call Writers Active 📉";
+  } else if (netPutOI > netCallOI && netCallPrice < 0) {
+    netBias = "Put Writers Active 📉";
+  }
 
   return (
     <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-4 flex flex-col h-[75vh]">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-lg font-semibold text-white">Option Heatmap Prediction</h3>
+        <h3 className="text-lg font-semibold text-white">
+          Option Heatmap Prediction ({symbol})
+        </h3>
         <div
           className={`font-bold ${
             netBias.includes("Bull")
