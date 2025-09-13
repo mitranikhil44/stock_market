@@ -26,9 +26,9 @@ export default function ProtectedLayout({ children }) {
     // }
 
     // Agar user login page pe hai aur token already hai → home bhejo
-    if (token && pathname === "/login" || "/register") {
-      router.push("/");
-    }
+    // if (token && pathname === "/login" || "/register") {
+    //   router.push("/");
+    // }
 
     setLoading(false);
   }, [router, pathname]);
