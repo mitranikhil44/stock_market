@@ -180,7 +180,7 @@ export default function OptionHeatmapPrediction({
                 <tr
                   key={i}
                   className={`text-center border-b border-gray-700 ${
-                    isATM ? "bg-yellow-900/30 font-semibold" : "hover:bg-gray-800/30"
+                    isATM ? "bg-blue-500/40 font-semibold" : "hover:bg-gray-800/30"
                   }`}
                 >
                   <td className="px-2 py-1 text-sky-300 font-medium">{r.strike}</td>

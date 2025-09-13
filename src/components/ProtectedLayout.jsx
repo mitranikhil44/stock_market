@@ -22,7 +22,8 @@ export default function ProtectedLayout({ children }) {
 
     // Private route par agar token nahi hai → login bhejo
     // if (!token) {
-    //   router.push("/login");
+    //   router.push("/login"); 
+    
     // }
 
     // Agar user login page pe hai aur token already hai → home bhejo

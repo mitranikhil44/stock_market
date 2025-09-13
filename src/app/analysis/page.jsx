@@ -190,10 +190,13 @@ const Analysis = () => {
       return 0;
     }
   }
+
   const filteredData = useMemo(() => {
-    if (interval === "all") return timewiseData;
+    if (interval === "all") return timewiseData; // 🔹 All time
+
     const minutes = intervalMap[interval];
     if (!minutes) return timewiseData;
+
     return timewiseData.filter(
       (row) => getMinutes(row.timestamp) % minutes === 0
     );
@@ -229,18 +232,36 @@ const Analysis = () => {
               <option value="midcap_nifty_50">Midcap 50</option>
             </select>
 
-            {/* Interval Selector */}
-            <select
-              value={interval}
-              onChange={(e) => setInterval(e.target.value)}
-              className="appearance-none rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 px-2 py-1 sm:px-4 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            >
-              <option value="all">All Time</option>
-              <option value="1m">1 Min</option>
-              <option value="5m">5 Min</option>
-              <option value="15m">15 Min</option>
-              <option value="30m">30 Min</option>
-            </select>
+            {/* 🔹 Interval Selector */}
+            <div className="relative">
+              <select
+                value={interval}
+                onChange={(e) => setInterval(e.target.value)}
+                className="appearance-none rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 px-2 py-1 sm:px-4 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              >
+                <option value="all">All Time</option> {/* 🔹 New */}
+                <option value="1m">1 Min</option>
+                <option value="5m">5 Min</option>
+                <option value="15m">15 Min</option>
+                <option value="30m">30 Min</option>
+              </select>
+
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <svg
+                  className="h-4 w-4 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
 
             {/* Refresh Button */}
             <button
@@ -276,6 +297,49 @@ const Analysis = () => {
 
               <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto">
                 <PCRDiffChart data={filteredData} />
+              </div>
+
+              {/* Time Selector Table */}
+              <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto max-h-64">
+                <h3 className="text-sm font-medium mb-2 text-foreground/90">
+                  Select End Time (Default = Latest)
+                </h3>
+                <table className="w-full text-xs border-collapse text-foreground/90 min-w-[400px]">
+                  <thead>
+                    <tr className="bg-white/10">
+                      <th className="px-2 py-1 text-left">#</th>
+                      <th className="px-2 py-1 text-left">Timestamp</th>
+                      <th className="px-2 py-1 text-center">Select</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredData.map((row, idx) => (
+                      <tr
+                        key={idx}
+                        className={`border-b border-white/10 ${
+                          selectedEndIndex === idx
+                            ? "bg-white/20 font-semibold"
+                            : ""
+                        }`}
+                      >
+                        <td className="px-2 py-1">{idx + 1}</td>
+                        <td className="px-2 py-1">{row.timestamp}</td>
+                        <td className="px-2 py-1 text-center">
+                          <button
+                            onClick={() => setSelectedEndIndex(idx)}
+                            className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
+                              selectedEndIndex === idx
+                                ? "bg-blue-600 text-white"
+                                : "bg-white/5 hover:bg-white/20"
+                            }`}
+                          >
+                            Use
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               {/* Prediction */}
