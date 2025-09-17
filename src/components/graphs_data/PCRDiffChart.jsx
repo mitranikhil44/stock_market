@@ -24,23 +24,46 @@ export default function PCRDiffChart({ data }) {
     return n.toLocaleString();
   }
 
-  const chartData = (data || []).map((d) => {
-    const totalCallOI = d.totalCallOI || 0;
-    const totalPutOI = d.totalPutOI || 0;
-    const totalCallVol = d.totalCallVol || 0;
-    const totalPutVol = d.totalPutVol || 0;
+  // Chart data mapping
+const chartData = (data || []).map((d) => {
+  const totalCallOI = d.totalCallOI || 0;
+  const totalPutOI = d.totalPutOI || 0;
+  const totalCallVol = d.totalCallVol || 0;
+  const totalPutVol = d.totalPutVol || 0;
 
-    return {
-      time: d.timestamp,
-      totalCallOI,
-      totalPutOI,
-      totalCallVol,
-      totalPutVol,
-      chgOI: totalPutOI - totalCallOI,
-      chgVol: totalPutVol - totalCallVol,
-      pcr: totalCallOI > 0 ? totalPutOI / totalCallOI : 0,
-    };
-  });
+  // 🕒 Timestamp formatting
+  let formattedTime = "-";
+  if (d.timestamp) {
+    if (d.timestamp.includes("AM") || d.timestamp.includes("PM")) {
+      // Case: "9:16:20 AM"
+      const parts = d.timestamp.split(" ");
+      const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+      const ampm = parts[1] || "";
+      formattedTime = `${timePart} ${ampm}`;
+    } else {
+      // Case: ISO "2025-09-14T10:25:00Z"
+      const dt = new Date(d.timestamp);
+      if (!isNaN(dt)) {
+        formattedTime = dt.toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      }
+    }
+  }
+
+  return {
+    time: formattedTime,
+    totalCallOI,
+    totalPutOI,
+    totalCallVol,
+    totalPutVol,
+    chgOI: totalPutOI - totalCallOI,
+    chgVol: totalPutVol - totalCallVol,
+    pcr: totalCallOI > 0 ? totalPutOI / totalCallOI : 0,
+  };
+});
 
   let line1Key, line2Key, line1Name, line2Name;
   if (chartMode === "OI") {

@@ -7,6 +7,7 @@ import PCRTable from "@/components/tables_data/PCRTable";
 import PCRDiffChart from "@/components/graphs_data/PCRDiffChart";
 import OptionHeatmapPrediction from "@/components/analysis/OptionHeatmapPrediction";
 import { RefreshCw } from "lucide-react"; // refresh icon
+import NetSummaryTable from "@/components/tables_data/NetSummaryTable";
 
 const symbolToIndex = {
   bank_nifty: "bank_nifty",
@@ -298,71 +299,6 @@ const Analysis = () => {
               <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto">
                 <PCRDiffChart data={filteredData} />
               </div>
-
-              {/* Time Selector Table */}
-              <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto max-h-64">
-                <h3 className="text-sm font-medium mb-2 text-foreground/90">
-                  Select End Time (Default = Latest)
-                </h3>
-                <table className="w-full text-xs border-collapse text-foreground/90 min-w-[400px]">
-                  <thead>
-                    <tr className="bg-white/10">
-                      <th className="px-2 py-1 text-left">#</th>
-                      <th className="px-2 py-1 text-left">Timestamp</th>
-                      <th className="px-2 py-1 text-center">Select</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredData.map((row, idx) => (
-                      <tr
-                        key={idx}
-                        className={`border-b border-white/10 ${
-                          selectedEndIndex === idx
-                            ? "bg-white/20 font-semibold"
-                            : ""
-                        }`}
-                      >
-                        <td className="px-2 py-1">{idx + 1}</td>
-                        <td className="px-2 py-1">{row.timestamp}</td>
-                        <td className="px-2 py-1 text-center">
-                          <button
-                            onClick={() => setSelectedEndIndex(idx)}
-                            className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
-                              selectedEndIndex === idx
-                                ? "bg-blue-600 text-white"
-                                : "bg-white/5 hover:bg-white/20"
-                            }`}
-                          >
-                            Use
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Prediction */}
-              {prediction && (
-                <div
-                  className={`glass-card p-2 md:p-4 mt-4 ${
-                    prediction.label.includes("Bull")
-                      ? "border-green-400/30"
-                      : prediction.label.includes("Bear")
-                      ? "border-red-400/30"
-                      : "border-gray-400/20"
-                  }`}
-                >
-                  <h3 className="text-lg font-semibold">
-                    {prediction.label} — {prediction.confidence}%
-                  </h3>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {prediction.reasons.length > 0
-                      ? prediction.reasons.join(" · ")
-                      : "No strong signals"}
-                  </div>
-                </div>
-              )}
             </>
           )}
 
@@ -376,6 +312,90 @@ const Analysis = () => {
               />
             </div>
           )}
+
+          <NetSummaryTable
+            snapshots={snapshots}
+            scale={{ divisor: SCALE_DIVISOR, unit: "M" }}
+          />
+
+          {/* Prediction */}
+          {prediction && (
+            <div
+              className={`glass-card p-2 md:p-4 my-4 ${
+                prediction.label.includes("Bull")
+                  ? "border-green-400/30"
+                  : prediction.label.includes("Bear")
+                  ? "border-red-400/30"
+                  : "border-gray-400/20"
+              }`}
+            >
+              <h3 className="text-lg font-semibold">
+                {prediction.label} — {prediction.confidence}%
+              </h3>
+              <div className="text-xs text-gray-400 mt-1">
+                {prediction.reasons.length > 0
+                  ? prediction.reasons.join(" · ")
+                  : "No strong signals"}
+              </div>
+            </div>
+          )}
+
+          {/* Time Selector Table */}
+          <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto max-h-64">
+            <h3 className="text-sm font-medium mb-2 text-foreground/90">
+              Select End Time (Default = Latest)
+            </h3>
+            <table className="w-full text-xs border-collapse text-foreground/90 min-w-[400px]">
+              <thead>
+                <tr className="bg-white/10">
+                  <th className="px-2 py-1 text-left">#</th>
+                  <th className="px-2 py-1 text-left">Timestamp</th>
+                  <th className="px-2 py-1 text-center">Select</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((row, idx) => {
+                  // Format timestamp → "HH:MM AM/PM"
+                  let formattedTime = "-";
+                  if (row.timestamp) {
+                    const parts = row.timestamp.split(" "); // ["9:16:20", "AM"]
+                    const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+                    const ampm = parts[1] || "";
+                    formattedTime = `${timePart} ${ampm}`;
+                  }
+
+                  return (
+                    <tr
+                      key={idx}
+                      className={`border-b border-white/10 ${
+                        selectedEndIndex === idx
+                          ? "bg-white/20 font-semibold"
+                          : ""
+                      }`}
+                    >
+                      <td className="px-2 py-1">{idx + 1}</td>
+                      <td className="px-2 py-1 text-sky-300 font-medium">
+                        {formattedTime}
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <button
+                          onClick={() => setSelectedEndIndex(idx)}
+                          className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
+                            selectedEndIndex === idx
+                              ? "bg-blue-600 text-white"
+                              : "bg-white/5 hover:bg-white/20"
+                          }`}
+                        >
+                          Use
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
           {latest && prev && (
             <div className="mt-6 glass-card p-2 md:p-4 overflow-x-auto">
               <OptionFlowShift

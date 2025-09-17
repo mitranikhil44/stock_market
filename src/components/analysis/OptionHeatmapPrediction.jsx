@@ -31,9 +31,8 @@ export default function OptionHeatmapPrediction({
   latestSnapshot,
   prevSnapshot,
   symbol,
-  spot, // 🔹 ATM highlight
+  spot,
 }) {
-  // 🔹 Process rows
   const rows = useMemo(() => {
     if (!latestSnapshot || !prevSnapshot) return [];
 
@@ -82,7 +81,6 @@ export default function OptionHeatmapPrediction({
     });
   }, [latestSnapshot, prevSnapshot]);
 
-  // 🔹 Intensity max reference
   const maxAbs = useMemo(() => {
     return Math.max(
       ...rows.flatMap((r) => [
@@ -93,7 +91,6 @@ export default function OptionHeatmapPrediction({
     );
   }, [rows]);
 
-  // 🔹 ATM strike detection
   const atmStrike = useMemo(() => {
     if (!spot || rows.length === 0) return null;
     let nearest = rows[0].strike;
@@ -108,42 +105,13 @@ export default function OptionHeatmapPrediction({
     return nearest;
   }, [rows, spot]);
 
-  // 🔹 Net calculations for prediction
-  const netCallOI = rows.reduce((a, r) => a + (r.callOiDelta ?? 0), 0);
-  const netPutOI = rows.reduce((a, r) => a + (r.putOiDelta ?? 0), 0);
-  const netCallPrice = rows.reduce((a, r) => a + (r.callPriceChg ?? 0), 0);
-  const netPutPrice = rows.reduce((a, r) => a + (r.putPriceChg ?? 0), 0);
-
-  // 🔹 Market bias prediction
-  let netBias = "Neutral Market 😐";
-  if (netCallOI > netPutOI * 1.3 && netCallPrice > 0) {
-    netBias = "Bullish Bias 🚀";
-  } else if (netPutOI > netCallOI * 1.3 && netPutPrice > 0) {
-    netBias = "Bearish Bias 🐻";
-  } else if (netCallOI > netPutOI && netPutPrice < 0) {
-    netBias = "Call Writers Active 📉";
-  } else if (netPutOI > netCallOI && netCallPrice < 0) {
-    netBias = "Put Writers Active 📉";
-  }
-
   return (
-    <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-4 flex flex-col h-[75vh]">
+    <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-4 flex flex-col h-[95vh]">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-lg font-semibold text-white">
           Option Heatmap Prediction ({symbol})
         </h3>
-        <div
-          className={`font-bold ${
-            netBias.includes("Bull")
-              ? "text-green-400"
-              : netBias.includes("Bear")
-              ? "text-red-400"
-              : "text-yellow-400"
-          }`}
-        >
-          {netBias}
-        </div>
       </div>
 
       {/* Spot & ATM Info */}
@@ -154,93 +122,121 @@ export default function OptionHeatmapPrediction({
         </p>
       )}
 
-      {/* Table */}
-      <div className="overflow-auto flex-1 border-t border-gray-700 rounded-lg">
-        <table className="w-full text-sm table-auto border-collapse">
-          <thead className="sticky top-0 bg-gray-800 z-10">
-            <tr className="text-gray-300">
-              <th className="px-2 py-1 border-b border-gray-700">Strike</th>
-              <th className="px-2 py-1 border-b border-gray-700">Call Δ OI</th>
-              <th className="px-2 py-1 border-b border-gray-700">Call Δ Vol</th>
-              <th className="px-2 py-1 border-b border-gray-700">Call Δ Price</th>
-              <th className="px-2 py-1 border-b border-gray-700">Call Signal</th>
-              <th className="px-2 py-1 border-b border-gray-700">Put Δ OI</th>
-              <th className="px-2 py-1 border-b border-gray-700">Put Δ Vol</th>
-              <th className="px-2 py-1 border-b border-gray-700">Put Δ Price</th>
-              <th className="px-2 py-1 border-b border-gray-700">Put Signal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => {
-              const callInt = intensity(r.callOiDelta, maxAbs);
-              const putInt = intensity(r.putOiDelta, maxAbs);
-              const isATM = atmStrike === r.strike;
+      {/* Tables Container */}
+      <div className="flex flex-col flex-1 gap-2">
+        {/* Call Table 50% height */}
+        <div className="flex-1 overflow-auto h-1/2 border-t border-gray-700 rounded-lg">
+          <h4 className="text-white font-semibold p-2">Call Options</h4>
+          <table className="w-full text-sm table-auto border-collapse">
+            <thead className="sticky top-0 bg-gray-800 z-10">
+              <tr className="text-gray-300">
+                <th className="px-2 py-1 border-b border-gray-700">Strike</th>
+                <th className="px-2 py-1 border-b border-gray-700">Δ OI</th>
+                <th className="px-2 py-1 border-b border-gray-700">Δ Vol</th>
+                <th className="px-2 py-1 border-b border-gray-700">Δ Price</th>
+                <th className="px-2 py-1 border-b border-gray-700">Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const callInt = intensity(r.callOiDelta, maxAbs);
+                const isATM = atmStrike === r.strike;
 
-              return (
-                <tr
-                  key={i}
-                  className={`text-center border-b border-gray-700 ${
-                    isATM ? "bg-blue-500/40 font-semibold" : "hover:bg-gray-800/30"
-                  }`}
-                >
-                  <td className="px-2 py-1 text-sky-300 font-medium">{r.strike}</td>
-
-                  <td
-                    className="px-2 py-1"
-                    style={{
-                      backgroundColor:
-                        r.callOiDelta > 0
-                          ? `rgba(16, 185, 129, ${callInt})`
-                          : `rgba(239, 68, 68, ${callInt})`,
-                    }}
-                  >
-                    {r.callOiDelta.toLocaleString("en-IN")}
-                  </td>
-
-                  <td className="px-2 py-1">{r.callVolDelta.toLocaleString("en-IN")}</td>
-                  <td
-                    className={`px-2 py-1 ${
-                      r.callPriceChg > 0
-                        ? "text-green-400"
-                        : r.callPriceChg < 0
-                        ? "text-red-400"
-                        : ""
+                return (
+                  <tr
+                    key={i}
+                    className={`text-center border-b border-gray-700 ${
+                      isATM ? "bg-blue-500/40 font-semibold" : "hover:bg-gray-800/30"
                     }`}
                   >
-                    {r.callPriceChg}
-                  </td>
-                  <td className="px-2 py-1">{r.callSignal}</td>
+                    <td className="px-2 py-1 text-sky-300 font-medium">{r.strike}</td>
+                    <td
+                      className="px-2 py-1"
+                      style={{
+                        backgroundColor:
+                          r.callOiDelta > 0
+                            ? `rgba(16, 185, 129, ${callInt})`
+                            : `rgba(239, 68, 68, ${callInt})`,
+                      }}
+                    >
+                      {r.callOiDelta.toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-2 py-1">{r.callVolDelta.toLocaleString("en-IN")}</td>
+                    <td
+                      className={`px-2 py-1 ${
+                        r.callPriceChg > 0
+                          ? "text-green-400"
+                          : r.callPriceChg < 0
+                          ? "text-red-400"
+                          : ""
+                      }`}
+                    >
+                      {r.callPriceChg}
+                    </td>
+                    <td className="px-2 py-1">{r.callSignal}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-                  <td
-                    className="px-2 py-1"
-                    style={{
-                      backgroundColor:
-                        r.putOiDelta > 0
-                          ? `rgba(16, 185, 129, ${putInt})`
-                          : `rgba(239, 68, 68, ${putInt})`,
-                    }}
-                  >
-                    {r.putOiDelta.toLocaleString("en-IN")}
-                  </td>
+        {/* Put Table 50% height */}
+        <div className="flex-1 overflow-auto border-t border-gray-700 rounded-lg">
+          <h4 className="text-white font-semibold p-2">Put Options</h4>
+          <table className="w-full text-sm table-auto border-collapse">
+            <thead className="sticky top-0 bg-gray-800 z-10">
+              <tr className="text-gray-300">
+                <th className="px-2 py-1 border-b border-gray-700">Strike</th>
+                <th className="px-2 py-1 border-b border-gray-700">Δ OI</th>
+                <th className="px-2 py-1 border-b border-gray-700">Δ Vol</th>
+                <th className="px-2 py-1 border-b border-gray-700">Δ Price</th>
+                <th className="px-2 py-1 border-b border-gray-700">Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const putInt = intensity(r.putOiDelta, maxAbs);
+                const isATM = atmStrike === r.strike;
 
-                  <td className="px-2 py-1">{r.putVolDelta.toLocaleString("en-IN")}</td>
-                  <td
-                    className={`px-2 py-1 ${
-                      r.putPriceChg > 0
-                        ? "text-green-400"
-                        : r.putPriceChg < 0
-                        ? "text-red-400"
-                        : ""
+                return (
+                  <tr
+                    key={i}
+                    className={`text-center border-b border-gray-700 ${
+                      isATM ? "bg-blue-500/40 font-semibold" : "hover:bg-gray-800/30"
                     }`}
                   >
-                    {r.putPriceChg}
-                  </td>
-                  <td className="px-2 py-1">{r.putSignal}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <td className="px-2 py-1 text-sky-300 font-medium">{r.strike}</td>
+                    <td
+                      className="px-2 py-1"
+                      style={{
+                        backgroundColor:
+                          r.putOiDelta > 0
+                            ? `rgba(16, 185, 129, ${putInt})`
+                            : `rgba(239, 68, 68, ${putInt})`,
+                      }}
+                    >
+                      {r.putOiDelta.toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-2 py-1">{r.putVolDelta.toLocaleString("en-IN")}</td>
+                    <td
+                      className={`px-2 py-1 ${
+                        r.putPriceChg > 0
+                          ? "text-green-400"
+                          : r.putPriceChg < 0
+                          ? "text-red-400"
+                          : ""
+                      }`}
+                    >
+                      {r.putPriceChg}
+                    </td>
+                    <td className="px-2 py-1">{r.putSignal}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

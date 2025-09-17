@@ -41,8 +41,12 @@ export default function PCRTable({ data }) {
                   index % 2 === 0 ? "bg-gray-900/30" : "bg-gray-800/30"
                 } hover:bg-blue-900/30`}
               >
-                <td className="px-4 py-2 font-mono text-gray-400">
-                  {row.timestamp}
+                <td className="py-2 px-2 font-medium text-yellow-400">
+                  {row.timestamp
+                    ? row.timestamp.split(":").slice(0, 2).join(":") +
+                      " " +
+                      row.timestamp.split(" ")[1]
+                    : "-"}
                 </td>
                 <td className="px-4 py-2 text-center font-semibold text-blue-400">
                   {row.pcrOI}

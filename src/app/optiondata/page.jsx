@@ -9,13 +9,41 @@ import { RefreshCcw } from "lucide-react"; // refresh icon
 // Convert "9:15:20 AM" → total seconds
 const parseTime = (timeStr) => {
   if (!timeStr) return 0;
-  const [time, meridian] = timeStr.split(" ");
-  let [hours, minutes, seconds] = time.split(":").map(Number);
+  if (timeStr.includes("AM") || timeStr.includes("PM")) {
+    const [time, meridian] = timeStr.split(" ");
+    let [hours, minutes, seconds] = time.split(":").map(Number);
 
-  if (meridian === "PM" && hours !== 12) hours += 12;
-  if (meridian === "AM" && hours === 12) hours = 0;
+    if (meridian === "PM" && hours !== 12) hours += 12;
+    if (meridian === "AM" && hours === 12) hours = 0;
 
-  return hours * 3600 + minutes * 60 + seconds;
+    return hours * 3600 + minutes * 60 + seconds;
+  } else {
+    const dt = new Date(timeStr);
+    return isNaN(dt) ? 0 : dt.getHours() * 3600 + dt.getMinutes() * 60 + dt.getSeconds();
+  }
+};
+
+// Format "9:15:20 AM" → "09:15 AM"
+const formatTimestamp = (timeStr) => {
+  if (!timeStr) return "-";
+  if (timeStr.includes("AM") || timeStr.includes("PM")) {
+    const [time, meridian] = timeStr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")} ${meridian}`;
+  } else {
+    const dt = new Date(timeStr);
+    if (!isNaN(dt)) {
+      return dt.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+  }
+  return timeStr;
 };
 
 const symbolToIndex = {
@@ -35,7 +63,7 @@ export default function OptionDataPage() {
   const [filteredSnapshots, setFilteredSnapshots] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  // ✅ Fetch snapshots + spot (extracted for reuse)
+  // ✅ Fetch snapshots + spot
   const fetchData = useCallback(async () => {
     try {
       setRefreshing(true);
@@ -97,7 +125,7 @@ export default function OptionDataPage() {
   }, [snapshots, selectedTimestamp]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-2">
+    <div className="w-full mx-auto p-4 sm:p-2">
       {/* Sticky Header Controls */}
       <div className="border-b py-3 mb-4 sticky top-0 bg-white/5 backdrop-blur z-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -123,7 +151,7 @@ export default function OptionDataPage() {
               >
                 {snapshots.map((snap) => (
                   <option key={snap._id} value={snap.timestamp}>
-                    {snap.timestamp}
+                    {formatTimestamp(snap.timestamp)}
                   </option>
                 ))}
               </select>
