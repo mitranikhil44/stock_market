@@ -106,7 +106,7 @@ export default function OptionHeatmapPrediction({
   }, [rows, spot]);
 
   return (
-    <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-4 flex flex-col h-[95vh]">
+    <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-4 flex flex-col h-[75vh]">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-lg font-semibold text-white">
@@ -122,121 +122,114 @@ export default function OptionHeatmapPrediction({
         </p>
       )}
 
-      {/* Tables Container */}
-      <div className="flex flex-col flex-1 gap-2">
-        {/* Call Table 50% height */}
-        <div className="flex-1 overflow-auto h-1/2 border-t border-gray-700 rounded-lg">
-          <h4 className="text-white font-semibold p-2">Call Options</h4>
-          <table className="w-full text-sm table-auto border-collapse">
-            <thead className="sticky top-0 bg-gray-800 z-10">
-              <tr className="text-gray-300">
-                <th className="px-2 py-1 border-b border-gray-700">Strike</th>
-                <th className="px-2 py-1 border-b border-gray-700">Δ OI</th>
-                <th className="px-2 py-1 border-b border-gray-700">Δ Vol</th>
-                <th className="px-2 py-1 border-b border-gray-700">Δ Price</th>
-                <th className="px-2 py-1 border-b border-gray-700">Signal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => {
-                const callInt = intensity(r.callOiDelta, maxAbs);
-                const isATM = atmStrike === r.strike;
+      {/* Combined Table */}
+      <div className="overflow-auto border-t border-gray-700 rounded-lg">
+        <table className="w-full text-sm table-auto border-collapse">
+          <thead className="sticky top-0 bg-gray-800 z-10">
+            <tr className="text-gray-300">
+              {/* Call Side */}
+              <th className="px-2 py-1 border-b border-gray-700" colSpan={5}>
+                Call Options
+              </th>
 
-                return (
-                  <tr
-                    key={i}
-                    className={`text-center border-b border-gray-700 ${
-                      isATM ? "bg-blue-500/40 font-semibold" : "hover:bg-gray-800/30"
+              {/* Strike */}
+              <th className="px-2 py-1 border-b border-gray-700">Strike</th>
+
+              {/* Put Side */}
+              <th className="px-2 py-1 border-b border-gray-700" colSpan={5}>
+                Put Options
+              </th>
+            </tr>
+            <tr className="text-gray-400 text-xs">
+              <th className="px-2 py-1 border-b border-gray-700">Δ OI</th>
+              <th className="px-2 py-1 border-b border-gray-700">Δ Vol</th>
+              <th className="px-2 py-1 border-b border-gray-700">Δ Price</th>
+              <th className="px-2 py-1 border-b border-gray-700">Signal</th>
+              <th className="px-2 py-1 border-b border-gray-700">LTP</th>
+
+              <th className="px-2 py-1 border-b border-gray-700">⚡</th>
+
+              <th className="px-2 py-1 border-b border-gray-700">Δ OI</th>
+              <th className="px-2 py-1 border-b border-gray-700">Δ Vol</th>
+              <th className="px-2 py-1 border-b border-gray-700">Δ Price</th>
+              <th className="px-2 py-1 border-b border-gray-700">Signal</th>
+              <th className="px-2 py-1 border-b border-gray-700">LTP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const callInt = intensity(r.callOiDelta, maxAbs);
+              const putInt = intensity(r.putOiDelta, maxAbs);
+              const isATM = atmStrike === r.strike;
+
+              return (
+                <tr
+                  key={i}
+                  className={`text-center border-b border-gray-700 ${
+                    isATM ? "bg-blue-500/40 font-semibold" : "hover:bg-gray-800/30"
+                  }`}
+                >
+                  {/* Call Side */}
+                  <td
+                    className="px-2 py-1"
+                    style={{
+                      backgroundColor:
+                        r.callOiDelta > 0
+                          ? `rgba(16, 185, 129, ${callInt})`
+                          : `rgba(239, 68, 68, ${callInt})`,
+                    }}
+                  >
+                    {r.callOiDelta.toLocaleString("en-IN")}
+                  </td>
+                  <td className="px-2 py-1">{r.callVolDelta.toLocaleString("en-IN")}</td>
+                  <td
+                    className={`px-2 py-1 ${
+                      r.callPriceChg > 0
+                        ? "text-green-400"
+                        : r.callPriceChg < 0
+                        ? "text-red-400"
+                        : ""
                     }`}
                   >
-                    <td className="px-2 py-1 text-sky-300 font-medium">{r.strike}</td>
-                    <td
-                      className="px-2 py-1"
-                      style={{
-                        backgroundColor:
-                          r.callOiDelta > 0
-                            ? `rgba(16, 185, 129, ${callInt})`
-                            : `rgba(239, 68, 68, ${callInt})`,
-                      }}
-                    >
-                      {r.callOiDelta.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-2 py-1">{r.callVolDelta.toLocaleString("en-IN")}</td>
-                    <td
-                      className={`px-2 py-1 ${
-                        r.callPriceChg > 0
-                          ? "text-green-400"
-                          : r.callPriceChg < 0
-                          ? "text-red-400"
-                          : ""
-                      }`}
-                    >
-                      {r.callPriceChg}
-                    </td>
-                    <td className="px-2 py-1">{r.callSignal}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    {r.callPriceChg}
+                  </td>
+                  <td className="px-2 py-1">{r.callSignal}</td>
+                  <td className="px-2 py-1 text-sky-300">{r.callPriceChg}</td>
 
-        {/* Put Table 50% height */}
-        <div className="flex-1 overflow-auto border-t border-gray-700 rounded-lg">
-          <h4 className="text-white font-semibold p-2">Put Options</h4>
-          <table className="w-full text-sm table-auto border-collapse">
-            <thead className="sticky top-0 bg-gray-800 z-10">
-              <tr className="text-gray-300">
-                <th className="px-2 py-1 border-b border-gray-700">Strike</th>
-                <th className="px-2 py-1 border-b border-gray-700">Δ OI</th>
-                <th className="px-2 py-1 border-b border-gray-700">Δ Vol</th>
-                <th className="px-2 py-1 border-b border-gray-700">Δ Price</th>
-                <th className="px-2 py-1 border-b border-gray-700">Signal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => {
-                const putInt = intensity(r.putOiDelta, maxAbs);
-                const isATM = atmStrike === r.strike;
+                  {/* Strike Price */}
+                  <td className="px-2 py-1 font-semibold text-yellow-400">{r.strike}</td>
 
-                return (
-                  <tr
-                    key={i}
-                    className={`text-center border-b border-gray-700 ${
-                      isATM ? "bg-blue-500/40 font-semibold" : "hover:bg-gray-800/30"
+                  {/* Put Side */}
+                  <td
+                    className="px-2 py-1"
+                    style={{
+                      backgroundColor:
+                        r.putOiDelta > 0
+                          ? `rgba(16, 185, 129, ${putInt})`
+                          : `rgba(239, 68, 68, ${putInt})`,
+                    }}
+                  >
+                    {r.putOiDelta.toLocaleString("en-IN")}
+                  </td>
+                  <td className="px-2 py-1">{r.putVolDelta.toLocaleString("en-IN")}</td>
+                  <td
+                    className={`px-2 py-1 ${
+                      r.putPriceChg > 0
+                        ? "text-green-400"
+                        : r.putPriceChg < 0
+                        ? "text-red-400"
+                        : ""
                     }`}
                   >
-                    <td className="px-2 py-1 text-sky-300 font-medium">{r.strike}</td>
-                    <td
-                      className="px-2 py-1"
-                      style={{
-                        backgroundColor:
-                          r.putOiDelta > 0
-                            ? `rgba(16, 185, 129, ${putInt})`
-                            : `rgba(239, 68, 68, ${putInt})`,
-                      }}
-                    >
-                      {r.putOiDelta.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-2 py-1">{r.putVolDelta.toLocaleString("en-IN")}</td>
-                    <td
-                      className={`px-2 py-1 ${
-                        r.putPriceChg > 0
-                          ? "text-green-400"
-                          : r.putPriceChg < 0
-                          ? "text-red-400"
-                          : ""
-                      }`}
-                    >
-                      {r.putPriceChg}
-                    </td>
-                    <td className="px-2 py-1">{r.putSignal}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    {r.putPriceChg}
+                  </td>
+                  <td className="px-2 py-1">{r.putSignal}</td>
+                  <td className="px-2 py-1 text-sky-300">{r.putPriceChg}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
