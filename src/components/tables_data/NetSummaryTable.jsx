@@ -40,8 +40,8 @@ export default function NetSummaryTable({
     return Number(String(val).replace(/,/g, "")) || 0;
   };
 
-  // calculate net summary per snapshot
-  const rows = snapshots.map((snap) => {
+  // calculate NET CHANGES (Δ) vs previous snapshot
+  const rows = snapshots.map((snap, idx) => {
     let totalCallOI = 0;
     let totalPutOI = 0;
     let totalCallVol = 0;
@@ -54,29 +54,40 @@ export default function NetSummaryTable({
       totalPutVol += cleanNum(r.PutVol);
     });
 
+    // Previous snapshot totals (for delta calculation)
+    let prev = { totalCallOI: 0, totalPutOI: 0, totalCallVol: 0, totalPutVol: 0 };
+    if (idx > 0) {
+      snapshots[idx - 1].data?.forEach((r) => {
+        prev.totalCallOI += cleanNum(r.CallOI);
+        prev.totalPutOI += cleanNum(r.PutOI);
+        prev.totalCallVol += cleanNum(r.CallVol);
+        prev.totalPutVol += cleanNum(r.PutVol);
+      });
+    }
+
     return {
       timestamp: snap.timestamp,
-      netCallOI: totalCallOI,
-      netPutOI: totalPutOI,
-      netCallVol: totalCallVol,
-      netPutVol: totalPutVol,
+      netCallOI: idx === 0 ? 0 : totalCallOI - prev.totalCallOI,
+      netPutOI: idx === 0 ? 0 : totalPutOI - prev.totalPutOI,
+      netCallVol: idx === 0 ? 0 : totalCallVol - prev.totalCallVol,
+      netPutVol: idx === 0 ? 0 : totalPutVol - prev.totalPutVol,
     };
   });
 
   return (
     <div className="bg-slate-900/70 border mt-4 sm:mt-2 border-slate-700 rounded-xl p-3 h-[40vh] flex flex-col">
       <h4 className="text-sm font-semibold text-slate-200 mb-2 px-1">
-        Net Summary (All Timestamps)
+        Net Summary Δ (Snapshot to Snapshot)
       </h4>
       <div className="overflow-auto rounded-md border border-slate-700 flex-1">
         <table className="w-full text-xs">
           <thead className="sticky top-0 bg-slate-800/90 backdrop-blur text-slate-300">
             <tr>
               <th className="text-left py-2 px-2">Timestamp</th>
-              <th className="text-right px-2">Net Call OI</th>
-              <th className="text-right px-2">Net Put OI</th>
-              <th className="text-right px-2">Net Call Vol</th>
-              <th className="text-right px-2">Net Put Vol</th>
+              <th className="text-right px-2">Δ Call OI</th>
+              <th className="text-right px-2">Δ Put OI</th>
+              <th className="text-right px-2">Δ Call Vol</th>
+              <th className="text-right px-2">Δ Put Vol</th>
             </tr>
           </thead>
           <tbody>
