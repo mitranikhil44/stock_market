@@ -313,11 +313,6 @@ const Analysis = () => {
             </div>
           )}
 
-          <NetSummaryTable
-            snapshots={snapshots}
-            scale={{ divisor: SCALE_DIVISOR, unit: "M" }}
-          />
-
           {/* Prediction */}
           {prediction && (
             <div
@@ -339,6 +334,11 @@ const Analysis = () => {
               </div>
             </div>
           )}
+
+          <NetSummaryTable
+            snapshots={snapshots}
+            scale={{ divisor: SCALE_DIVISOR, unit: "M" }}
+          />
 
           {/* Time Selector Table */}
           <div className="glass-card p-2 md:p-4 mb-6 overflow-x-auto max-h-64">
