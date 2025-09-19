@@ -245,7 +245,7 @@ function MarketChart({ symbol, title }) {
   }
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl shadow-md p-4 my-6">
+    <div className="bg-white/5 border m-auto container border-white/10 rounded-2xl shadow-md p-4 my-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-bold text-white">{title}</h2>
         <select

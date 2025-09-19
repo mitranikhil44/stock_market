@@ -125,7 +125,7 @@ export default function OptionDataPage() {
   }, [snapshots, selectedTimestamp]);
 
   return (
-    <div className="w-full mx-auto p-4 sm:p-2">
+    <div className="container w-full mx-auto p-4 sm:p-2">
       {/* Sticky Header Controls */}
       <div className="border-b py-3 mb-4 sticky top-0 bg-white/5 backdrop-blur z-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

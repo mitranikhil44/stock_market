@@ -1,12 +1,19 @@
 import React from "react";
+import Image from "next/image";
 
 export default function HomePage() {
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
-      {/* Background layers */}
-      <div className="bg-grid" />
-      <div className="bg-spotlights" />
-      <div className="bg-noise" />
+      {/* Background Image */}
+      <div className="absolute inset-0 -z-10">
+        <Image
+          src="/image/landing.jpg"
+          alt="Landing Background"
+          fill
+          className="object-cover opacity-30"
+          priority
+        />
+      </div>
 
       {/* Hero */}
       <section className="relative z-10 text-center py-28 px-6">
@@ -48,9 +55,7 @@ export default function HomePage() {
             <p className="opacity-80">{item.text}</p>
           </div>
         ))}
-      </section><footer className="relative z-10 text-center py-8 text-sm text-foreground/60">
-        © {new Date().getFullYear()} MyApp. All rights reserved.
-      </footer>
+      </section>
     </div>
   );
 }

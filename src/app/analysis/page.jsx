@@ -212,7 +212,7 @@ const Analysis = () => {
   const prev = snapshots[0] || null;
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
+    <div className="container mx-auto px-3 sm:px-6 py-6">
       {/* Sticky Header */}
       <div className="sticky top-0 z-20 bg-gray-950/80 backdrop-blur-md border-b border-white/10 mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-3 gap-3">

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Menu, X } from 'lucide-react';
@@ -33,8 +34,19 @@ export default function Navbar() {
 
   return (
     <nav className="bg-gray-900 text-white shadow-md px-4 sm:px-6 py-3 flex items-center justify-between">
-      <Link href="/" className="text-xl font-bold text-blue-400">
-        📈 Option Flow
+      {/* Logo with link */}
+      <Link href="/" className="flex items-center gap-2">
+        <Image
+          src="/image/option_flow.png"   
+          alt="Option Flow Logo"
+          width={26}
+          height={26}
+          className="rounded-md"
+          priority
+        />
+        <span className="text-sm sm:text-lg lg:text-lg font-bold text-blue-400">
+          Option Flow
+        </span>
       </Link>
 
       {/* Hamburger button (mobile) */}
@@ -60,11 +72,7 @@ export default function Navbar() {
             </Link>
           </>
         ) : (
-          <>
-           {/* <Link href="/login" className="bg-blue-600 text-sm px-3 py-1 rounded hover:bg-blue-500">
-             Login / Signup
-           </Link> */}
-          .</>
+          <></>
         )}
       </div>
 

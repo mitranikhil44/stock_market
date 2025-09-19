@@ -125,7 +125,7 @@ export default function StrikeMetricPage() {
   }, [series]);
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+    <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl sm:text-2xl font-bold text-white">
           {symbol.replace(/_/g, ' ')} · Strike {strike} · {metric.toUpperCase()}

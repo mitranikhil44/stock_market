@@ -4,7 +4,7 @@ import React from "react";
 
 const AboutPage = () => {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br bg-transparent text-gray-100 py-16 px-6">
+    <div className="min-h-screen container m-auto w-full bg-gradient-to-br bg-transparent text-gray-100 py-16 px-6">
       <div className="max-w-6xl mx-auto">
         {/* Heading */}
         <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-12 bg-clip-text text-transparent bg-gradient-to-r from-white via-red-800 to-black">
