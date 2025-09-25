@@ -402,34 +402,6 @@ export default function OptionFlowShift({
         </div>
       </div>
 
-      {/* net summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-          <div className="text-[11px] text-slate-400">Net Call OI Δ</div>
-          <div className={`text-sm font-semibold ${signCls(built.nets.netCallOI)}`}>
-            {(built.nets.netCallOI > 0 ? "+" : "") + (built.nets.netCallOI == null ? "-" : Number((built.nets.netCallOI / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
-          </div>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-          <div className="text-[11px] text-slate-400">Net Put OI Δ</div>
-          <div className={`text-sm font-semibold ${signCls(built.nets.netPutOI)}`}>
-            {(built.nets.netPutOI > 0 ? "+" : "") + (built.nets.netPutOI == null ? "-" : Number((built.nets.netPutOI / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
-          </div>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-          <div className="text-[11px] text-slate-400">Net Call Vol Δ</div>
-          <div className={`text-sm font-semibold ${signCls(built.nets.netCallVol)}`}>
-            {(built.nets.netCallVol > 0 ? "+" : "") + (built.nets.netCallVol == null ? "-" : Number((built.nets.netCallVol / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
-          </div>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-          <div className="text-[11px] text-slate-400">Net Put Vol Δ</div>
-          <div className={`text-sm font-semibold ${signCls(built.nets.netPutVol)}`}>
-            {(built.nets.netPutVol > 0 ? "+" : "") + (built.nets.netPutVol == null ? "-" : Number((built.nets.netPutVol / scale.divisor).toFixed(2)).toLocaleString('en-IN') + (scale.unit ? ` ${scale.unit}` : ''))}
-          </div>
-        </div>
-      </div>
-
       {/* inflow / outflow */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <RowTable
