@@ -58,6 +58,18 @@ export default function NetSummaryTable({
 
   const start = rows[startIdx];
   const end = rows[endIdx];
+  
+  const formatTime = (data) => {
+    // Format timestamp → "HH:MM AM/PM"
+    let formattedTime = "-";
+    if (data.timestamp) {
+      const parts = data.timestamp.split(" "); // ["9:16:20", "AM"]
+      const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+      const ampm = parts[1] || "";
+      formattedTime = `${timePart} ${ampm}`;
+    }
+    return formattedTime;
+  };
 
   const netChange =
     start && end
@@ -127,11 +139,21 @@ export default function NetSummaryTable({
               onChange={(e) => setStartIdx(Number(e.target.value))}
               className="bg-slate-800 border border-slate-600 rounded px-2 py-1"
             >
-              {rows.map((r, i) => (
-                <option key={i} value={i}>
-                  {r.timestamp}
-                </option>
-              ))}
+              {rows.map((r, i) => {
+                // Format timestamp → "HH:MM AM/PM"
+                let formattedTime = "-";
+                if (r.timestamp) {
+                  const parts = r.timestamp.split(" "); // ["9:16:20", "AM"]
+                  const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+                  const ampm = parts[1] || "";
+                  formattedTime = `${timePart} ${ampm}`;
+                }
+                return (
+                  <option key={i} value={i}>
+                    {formattedTime}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div>
@@ -141,11 +163,21 @@ export default function NetSummaryTable({
               onChange={(e) => setEndIdx(Number(e.target.value))}
               className="bg-slate-800 border border-slate-600 rounded px-2 py-1"
             >
-              {rows.map((r, i) => (
-                <option key={i} value={i}>
-                  {r.timestamp}
-                </option>
-              ))}
+              {rows.map((r, i) => {
+                // Format timestamp → "HH:MM AM/PM"
+                let formattedTime = "-";
+                if (r.timestamp) {
+                  const parts = r.timestamp.split(" "); // ["9:16:20", "AM"]
+                  const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+                  const ampm = parts[1] || "";
+                  formattedTime = `${timePart} ${ampm}`;
+                }
+                return (
+                  <option key={i} value={i}>
+                    {formattedTime}
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>
@@ -156,9 +188,15 @@ export default function NetSummaryTable({
         <div className="bg-slate-800/60 border border-slate-600 rounded-xl p-3">
           <div className="text-[12px] text-slate-400 mb-2">
             Net Change from{" "}
-            <span className="text-sky-400 font-medium">{start.timestamp}</span>{" "}
-            → <span className="text-sky-400 font-medium">{end.timestamp}</span>
+            <span className="text-sky-400 font-medium">
+              {formatTime(start?.timestamp)}
+            </span>{" "}
+            →{" "}
+            <span className="text-sky-400 font-medium">
+              {formatTime(end?.timestamp)}
+            </span>
           </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="bg-white/5 border border-white/10 rounded-xl p-2">
               <div className="text-[11px] text-slate-400">Δ Call OI</div>

@@ -349,7 +349,6 @@ const Analysis = () => {
                         const ampm = parts[1] || "";
                         formattedTime = `${timePart} ${ampm}`;
                       }
-
                       return (
                         <tr
                           key={idx}
