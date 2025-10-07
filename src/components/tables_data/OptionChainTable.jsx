@@ -229,7 +229,7 @@ export default function OptionChainTable({
 
       <div className="overflow-x-auto max-h-[80vh]">
         <table className="min-w-[900px] w-full table-auto text-xs sm:text-sm border-collapse">
-          <thead className="bg-black backdrop-blur">
+          <thead className="bg-black backdrop-blur sticky top-0 z-10">
             <tr>
               <td colSpan={11} className="pb-1 border-white/10">
                 <div className="flex items-center justify-center gap-4">
@@ -271,7 +271,7 @@ export default function OptionChainTable({
                 </div>
               </td>
             </tr>
-            <tr className="text-gray-300 sticky top-0 z-10 bg-black">
+            <tr className="text-gray-300 bg-black">
               <th className="py-1 px-1 text-center border-x">Call LTP</th>
               <th className="py-1 px-1 text-center border-x">Call Chg</th>
               <th className="py-1 px-1 text-center border-x">Call Vol</th>
