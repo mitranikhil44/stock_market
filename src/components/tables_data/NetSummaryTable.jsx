@@ -51,22 +51,26 @@ export default function NetSummaryTable({
   });
 
   const latest = rows.length ? rows[rows.length - 1] : null;
+
+  // 🔹 Default start = first, end = latest
   const [startIdx, setStartIdx] = useState(0);
   const [endIdx, setEndIdx] = useState(rows.length - 1);
 
   const start = rows[startIdx];
   const end = rows[endIdx];
-
-  // 🔹 Format time helper
-  const formatTime = (t) => {
-    if (!t) return "-";
-    const parts = t.split(" ");
-    const timePart = parts[0]?.split(":").slice(0, 2).join(":");
-    const ampm = parts[1] || "";
-    return `${timePart} ${ampm}`;
+  
+  const formatTime = (data) => {
+    // Format timestamp → "HH:MM AM/PM"
+    let formattedTime = "-";
+    if (data.timestamp) {
+      const parts = data.timestamp.split(" "); // ["9:16:20", "AM"]
+      const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+      const ampm = parts[1] || "";
+      formattedTime = `${timePart} ${ampm}`;
+    }
+    return formattedTime;
   };
 
-  // 🔹 Calculate net changes
   const netChange =
     start && end
       ? {
@@ -77,124 +81,152 @@ export default function NetSummaryTable({
         }
       : null;
 
-  // 🔹 Bias calculation
-  const getBias = (deltaCallOI, deltaPutOI) => {
-    if (deltaCallOI > 0 && deltaPutOI < 0) return "Bearish 📉";
-    if (deltaPutOI > 0 && deltaCallOI < 0) return "Bullish 📈";
-    if (deltaCallOI > 0 && deltaPutOI > 0) return "Range-bound ⚖️";
-    return "Neutral";
-  };
-
-  // 🔹 Smart money strength score
-  const getStrength = (r, prev) => {
-    const deltaCall = r.totalCallOI - prev.totalCallOI;
-    const deltaPut = r.totalPutOI - prev.totalPutOI;
-    const deltaVol = (r.totalPutVol - prev.totalPutVol) - (r.totalCallVol - prev.totalCallVol);
-    const score = deltaPut - deltaCall + deltaVol * 0.5;
-    if (score > 0) return { signal: "Bullish", score };
-    if (score < 0) return { signal: "Bearish", score };
-    return { signal: "Neutral", score };
-  };
-
-  // 🔹 Reversal detector (last 3 snapshots)
-  const detectReversal = (rows) => {
-    const n = rows.length;
-    if (n < 3) return null;
-    const prev2 = rows[n - 3], prev1 = rows[n - 2], latest = rows[n - 1];
-    const callTrend = prev2.totalCallOI < prev1.totalCallOI && prev1.totalCallOI < latest.totalCallOI;
-    const putTrend = prev2.totalPutOI < prev1.totalPutOI && prev1.totalPutOI < latest.totalPutOI;
-    if (callTrend && latest.totalPutOI > prev1.totalPutOI * 1.05) return "🔻 Bearish Reversal";
-    if (putTrend && latest.totalCallOI > prev1.totalCallOI * 1.05) return "🔺 Bullish Reversal";
-    return null;
-  };
-
-  const reversal = detectReversal(rows);
-  const pcr = end ? (end.totalPutOI / end.totalCallOI).toFixed(2) : "-";
-
   return (
     <div className="bg-slate-900/70 border mt-4 sm:mt-2 border-slate-700 rounded-xl p-3 flex flex-col gap-4">
       <h4 className="text-sm font-semibold text-slate-200">
         Net Summary (Snapshot to Snapshot + Cumulative)
       </h4>
 
-      {/* Latest Summary */}
+      {/* summary cards (latest cumulative) */}
       {latest && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {[
-            { label: "Total Call OI", val: latest.totalCallOI },
-            { label: "Total Put OI", val: latest.totalPutOI },
-            { label: "Total Call Vol", val: latest.totalCallVol },
-            { label: "Total Put Vol", val: latest.totalPutVol },
-          ].map((item, i) => (
-            <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-3">
-              <div className="text-[11px] text-slate-400">{item.label}</div>
-              <div className={`text-sm font-semibold ${signCls(item.val)}`}>
-                {formatNum(item.val, scale.divisor, scale.unit)}
-              </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+            <div className="text-[11px] text-slate-400">Total Call OI</div>
+            <div
+              className={`text-sm font-semibold ${signCls(latest.totalCallOI)}`}
+            >
+              {formatNum(latest.totalCallOI, scale.divisor, scale.unit)}
             </div>
-          ))}
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+            <div className="text-[11px] text-slate-400">Total Put OI</div>
+            <div
+              className={`text-sm font-semibold ${signCls(latest.totalPutOI)}`}
+            >
+              {formatNum(latest.totalPutOI, scale.divisor, scale.unit)}
+            </div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+            <div className="text-[11px] text-slate-400">Total Call Vol</div>
+            <div
+              className={`text-sm font-semibold ${signCls(
+                latest.totalCallVol
+              )}`}
+            >
+              {formatNum(latest.totalCallVol, scale.divisor, scale.unit)}
+            </div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+            <div className="text-[11px] text-slate-400">Total Put Vol</div>
+            <div
+              className={`text-sm font-semibold ${signCls(latest.totalPutVol)}`}
+            >
+              {formatNum(latest.totalPutVol, scale.divisor, scale.unit)}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Timestamp Selector */}
+      {/* 🔹 Dropdowns to choose start & end timestamps */}
       {rows.length > 1 && (
         <div className="flex gap-3 items-center text-xs text-slate-300">
-          {[
-            { label: "Start", idx: startIdx, setIdx: setStartIdx },
-            { label: "End", idx: endIdx, setIdx: setEndIdx },
-          ].map(({ label, idx, setIdx }) => (
-            <div key={label}>
-              <label className="block text-[11px] text-slate-400 mb-1">{label}</label>
-              <select
-                value={idx}
-                onChange={(e) => setIdx(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-600 rounded px-2 py-1"
-              >
-                {rows.map((r, i) => (
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">
+              Start
+            </label>
+            <select
+              value={startIdx}
+              onChange={(e) => setStartIdx(Number(e.target.value))}
+              className="bg-slate-800 border border-slate-600 rounded px-2 py-1"
+            >
+              {rows.map((r, i) => {
+                // Format timestamp → "HH:MM AM/PM"
+                let formattedTime = "-";
+                if (r.timestamp) {
+                  const parts = r.timestamp.split(" "); // ["9:16:20", "AM"]
+                  const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+                  const ampm = parts[1] || "";
+                  formattedTime = `${timePart} ${ampm}`;
+                }
+                return (
                   <option key={i} value={i}>
-                    {formatTime(r.timestamp)}
+                    {formattedTime}
                   </option>
-                ))}
-              </select>
-            </div>
-          ))}
+                );
+              })}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">End</label>
+            <select
+              value={endIdx}
+              onChange={(e) => setEndIdx(Number(e.target.value))}
+              className="bg-slate-800 border border-slate-600 rounded px-2 py-1"
+            >
+              {rows.map((r, i) => {
+                // Format timestamp → "HH:MM AM/PM"
+                let formattedTime = "-";
+                if (r.timestamp) {
+                  const parts = r.timestamp.split(" "); // ["9:16:20", "AM"]
+                  const timePart = parts[0]?.split(":").slice(0, 2).join(":"); // "9:16"
+                  const ampm = parts[1] || "";
+                  formattedTime = `${timePart} ${ampm}`;
+                }
+                return (
+                  <option key={i} value={i}>
+                    {formattedTime}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
         </div>
       )}
 
-      {/* Analysis Panel */}
+      {/* 🔹 selected timestamp net summary card */}
       {netChange && (
         <div className="bg-slate-800/60 border border-slate-600 rounded-xl p-3">
           <div className="text-[12px] text-slate-400 mb-2">
-            Analysis from{" "}
-            <span className="text-sky-400">{formatTime(start?.timestamp)}</span> →{" "}
-            <span className="text-sky-400">{formatTime(end?.timestamp)}</span>
+            Net Change from{" "}
+            <span className="text-sky-400 font-medium">
+              {formatTime(start?.timestamp)}
+            </span>{" "}
+            →{" "}
+            <span className="text-sky-400 font-medium">
+              {formatTime(end?.timestamp)}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-300">
-            <div>
-              <span className="text-sky-400">Directional Bias:</span>{" "}
-              {getBias(netChange.deltaCallOI, netChange.deltaPutOI)}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-2">
+              <div className="text-[11px] text-slate-400">Δ Call OI</div>
+              <div className={`text-sm ${signCls(netChange.deltaCallOI)}`}>
+                {formatNum(netChange.deltaCallOI, scale.divisor, scale.unit)}
+              </div>
             </div>
-            <div>
-              <span className="text-sky-400">PCR:</span> {pcr}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-2">
+              <div className="text-[11px] text-slate-400">Δ Put OI</div>
+              <div className={`text-sm ${signCls(netChange.deltaPutOI)}`}>
+                {formatNum(netChange.deltaPutOI, scale.divisor, scale.unit)}
+              </div>
             </div>
-            <div>
-              <span className="text-sky-400">Strength:</span>{" "}
-              {(() => {
-                const prev = rows[endIdx - 1] || end;
-                const s = getStrength(end, prev);
-                return `${s.signal} (${s.score.toFixed(0)})`;
-              })()}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-2">
+              <div className="text-[11px] text-slate-400">Δ Call Vol</div>
+              <div className={`text-sm ${signCls(netChange.deltaCallVol)}`}>
+                {formatNum(netChange.deltaCallVol, scale.divisor, scale.unit)}
+              </div>
             </div>
-            <div>
-              <span className="text-sky-400">Reversal Alert:</span>{" "}
-              {reversal ? reversal : "None"}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-2">
+              <div className="text-[11px] text-slate-400">Δ Put Vol</div>
+              <div className={`text-sm ${signCls(netChange.deltaPutVol)}`}>
+                {formatNum(netChange.deltaPutVol, scale.divisor, scale.unit)}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Table */}
+      {/* detailed table */}
       <div className="overflow-auto rounded-md border border-slate-700 flex-1 max-h-[45vh]">
         <table className="w-full text-xs">
           <thead className="sticky top-0 bg-slate-800/90 backdrop-blur text-slate-300">
@@ -206,41 +238,142 @@ export default function NetSummaryTable({
               <th className="text-right px-2">Δ Put Vol</th>
               <th className="text-right px-2">Total Call OI</th>
               <th className="text-right px-2">Total Put OI</th>
+              <th className="text-right px-2">Total Call Vol</th>
+              <th className="text-right px-2">Total Put Vol</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => {
+              // 🔹 Previous snapshot
               const prev = rows[i - 1] || {};
-              const diff = (a, b) => (a == null || b == null ? null : a - b);
+
+              // 🔹 Difference helpers
+              const diff = (curr, prevVal) => {
+                if (curr == null || prevVal == null) return null;
+                return curr - prevVal;
+              };
 
               return (
                 <tr
                   key={i}
-                  className={`${i % 2 === 0 ? "bg-slate-800/40" : "bg-slate-900/40"} hover:bg-slate-700/40`}
+                  className={`${
+                    i % 2 === 0 ? "bg-slate-800/40" : "bg-slate-900/40"
+                  } hover:bg-slate-700/40 transition`}
                 >
-                  <td className="py-2 font-medium text-sky-300">{r.timestamp}</td>
-                  {[r.totalCallOI, r.totalPutOI, r.totalCallVol, r.totalPutVol].map((val, j) => {
-                    const prevVal = [prev.totalCallOI, prev.totalPutOI, prev.totalCallVol, prev.totalPutVol][j];
-                    const d = diff(val, prevVal);
-                    return (
-                      <td
-                        key={j}
-                        className={`px-2 text-right ${
-                          d > 0 ? "text-green-400" : d < 0 ? "text-red-400" : "text-slate-400"
-                        }`}
-                      >
-                        {d !== null ? formatNum(d, scale.divisor, scale.unit) : "-"}
-                      </td>
-                    );
-                  })}
-                  <td className="px-2 text-right">{formatNum(r.totalCallOI, scale.divisor, scale.unit)}</td>
-                  <td className="px-2 text-right">{formatNum(r.totalPutOI, scale.divisor, scale.unit)}</td>
+                  <td className="py-2 font-medium text-sky-300">
+                    {r.timestamp}
+                  </td>
+                  {/* Δ Call OI */}
+                  <td
+                    className={`px-2 text-right ${
+                      diff(r.totalCallOI, prev.totalCallOI) > 0
+                        ? "text-green-400"
+                        : diff(r.totalCallOI, prev.totalCallOI) < 0
+                        ? "text-red-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {diff(r.totalCallOI, prev.totalCallOI) !== null
+                      ? formatNum(
+                          diff(r.totalCallOI, prev.totalCallOI),
+                          scale.divisor,
+                          scale.unit
+                        )
+                      : "-"}
+                  </td>
+
+                  {/* Δ Put OI */}
+                  <td
+                    className={`px-2 text-right ${
+                      diff(r.totalPutOI, prev.totalPutOI) > 0
+                        ? "text-green-400"
+                        : diff(r.totalPutOI, prev.totalPutOI) < 0
+                        ? "text-red-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {diff(r.totalPutOI, prev.totalPutOI) !== null
+                      ? formatNum(
+                          diff(r.totalPutOI, prev.totalPutOI),
+                          scale.divisor,
+                          scale.unit
+                        )
+                      : "-"}
+                  </td>
+
+                  {/* Δ Call Vol */}
+                  <td
+                    className={`px-2 text-right ${
+                      diff(r.totalCallVol, prev.totalCallVol) > 0
+                        ? "text-green-400"
+                        : diff(r.totalCallVol, prev.totalCallVol) < 0
+                        ? "text-red-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {diff(r.totalCallVol, prev.totalCallVol) !== null
+                      ? formatNum(
+                          diff(r.totalCallVol, prev.totalCallVol),
+                          scale.divisor,
+                          scale.unit
+                        )
+                      : "-"}
+                  </td>
+
+                  {/* Δ Put Vol */}
+                  <td
+                    className={`px-2 text-right ${
+                      diff(r.totalPutVol, prev.totalPutVol) > 0
+                        ? "text-green-400"
+                        : diff(r.totalPutVol, prev.totalPutVol) < 0
+                        ? "text-red-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {diff(r.totalPutVol, prev.totalPutVol) !== null
+                      ? formatNum(
+                          diff(r.totalPutVol, prev.totalPutVol),
+                          scale.divisor,
+                          scale.unit
+                        )
+                      : "-"}
+                  </td>
+
+                  {/* Total Put OI */}
+                  <td className="px-2 text-right">
+                    {formatNum(r.totalPutOI, scale.divisor, scale.unit)}
+                  </td>
+
+                  {/* Total Call OI */}
+                  <td className="px-2 text-right">
+                    {formatNum(r.totalCallOI, scale.divisor, scale.unit)}
+                  </td>
+
+                  {/* Total Call Vol */}
+                  <td className="px-2 text-right">
+                    {formatNum(r.totalCallVol, scale.divisor, scale.unit)}
+                  </td>
+
+                  {/* Total Put Vol */}
+                  <td className="px-2 text-right">
+                    {formatNum(r.totalPutVol, scale.divisor, scale.unit)}
+                  </td>
                 </tr>
               );
             })}
+            {!rows.length && (
+              <tr>
+                <td
+                  colSpan={9}
+                  className="py-3 text-center text-slate-500 italic"
+                >
+                  No snapshots available
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
-}
+                        }
